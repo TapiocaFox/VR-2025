@@ -9,7 +9,7 @@ install Node.js and npm if you haven't. Then in the command line, do
 npm install
 cd server
 npm install
-source patch
+./patch.sh
 ```
 
 # How to run on your local computer
