@@ -37,13 +37,6 @@ npm install
 4. Go to your VR headset and accept *Allow USB Debugging* when prompted on the headset
 5. On the chrome://inspect#devices on your computer, you should be able to see your device under the *Remote Target* and its active programs. You can then inspect the *NYU-FRL-XR* window on your computer.
 
-# How to create your own demo
-
-1. Go to the [scenes folder](https://github.com/futurerealitylab/NYU-FRL-XR/tree/master/js/scenes/) and create a .js file based on the template of [demoSimplest.js](https://github.com/futurerealitylab/NYU-FRL-XR/tree/master/js/scenes/demoSimplest.js)
-2. Change the name and the content of the demo to whatever you like!
-3. Go to [scenes.js](https://github.com/futurerealitylab/NYU-FRL-XR/tree/master/js/scenes/scenes.js), add the name of your demo and its path to the returned value of [```scenes```](https://github.com/futurerealitylab/NYU-FRL-XR/tree/master/js/scenes/scenes.js#L11)
-4. Note that the [```enableSceneReloading```](https://github.com/futurerealitylab/NYU-FRL-XR/tree/master/js/scenes/scenes.js#L10) is set to true so that you can hot-reload the changes in your demo. 
-
 # How to enable your hand-tracking
 
 1. Enable the experimental feature in the browser (Oculus Browser 11)
