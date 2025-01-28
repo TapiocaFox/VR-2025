@@ -2292,7 +2292,7 @@ function Node(_form) {
 
    this.control = (ch, label, func) => this._controlActions[ch] = { label: label, func: func };
 
-   this.add = (form) => {
+   this.add = form => {
       let child = new Node(form);
       this._children.push(child);
       child._bevel  = null;
@@ -2309,7 +2309,6 @@ function Node(_form) {
       child._flags  = null;
       child._customShader = null;
       this.dataTree.children.push(child.dataTree);
-      // this.dataTree.children.add(childJson);
       return child;
    }
 
@@ -2830,6 +2829,8 @@ function Node(_form) {
          image.src = src;
       }
       else {                                      // FOR ANY OTHER TEXTURE SOURCE,
+         if (! src._animate)
+	    do_not_animate = true;
          gl.activeTexture (gl.TEXTURE0 + txtr);   // ASSUME THAT ITS CONTENT CAN BE ANIMATED.
          gl.bindTexture   (gl.TEXTURE_2D, gl.createTexture());
          gl.texParameteri (gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);

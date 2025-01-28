@@ -1,5 +1,6 @@
 export const init = async model => {
    model.txtrSrc(1, '../media/textures/sky.jpg');
+   model.txtrSrc(2, '../media/textures/chessboard.png');
    let joint1 = model.add();
    let joint2 = joint1.add();
    let obj1 = joint1.add('tubeX');
@@ -14,7 +15,7 @@ export const init = async model => {
 	    ;
       obj1.identity().scale(.2).txtr(1);
 
-      obj2.identity().scale(.1).color(0,1,1);
+      obj2.identity().scale(.1).color(1,1,0).txtr(2);
    });
 }
 

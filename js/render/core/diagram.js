@@ -1,7 +1,7 @@
 import * as cg from "./cg.js";
-import { g2 } from "../../util/g2.js";
+import { G2 } from "../../util/g2.js";
 
-export function Diagram(model, center, size, callback) {
+export function Diagram(model, txtrUnitL, txtrUnitR, center, size, callback) {
 
    // INITIALIZE THE FLATTENED CUBES CONTAINING THE CANVAS FOR THE USER'S TWO EYES.
 
@@ -10,8 +10,13 @@ export function Diagram(model, center, size, callback) {
       model.add('cube').color(2,2,2).view(1),
    ];
 
-   obj[0].texture(() => draw(0));
-   obj[1].texture(() => draw(1));
+   obj[0].txtr(txtrUnitL);
+   obj[1].txtr(txtrUnitR);
+
+   let g2LR = [ new G2(), new G2() ];
+
+   model.txtrSrc(txtrUnitL, g2LR[0].getCanvas());
+   model.txtrSrc(txtrUnitR, g2LR[1].getCanvas());
 
    // APPLICATION PROGRAMMER'S INTERFACE FOR MATRIX MANIPULATION.
 
@@ -55,7 +60,10 @@ export function Diagram(model, center, size, callback) {
 
    let projectPoint = point => {
       let beamMatrix = cg.mMultiply(worldCoords, createBeamMatrix(eye, point));
-      return cg.mHitRect(beamMatrix, objMatrix);
+      let p = cg.mHitRect(beamMatrix, objMatrix);
+      if (p)
+         p = [ 2*p[0]-1, 2*p[1]-1, p[2] ];
+      return p;
    }
 
    // TEXT ITEMS ALWAYS FACE THE CAMERA.
@@ -91,8 +99,8 @@ export function Diagram(model, center, size, callback) {
 
    let imageData = null;
    this.points = ({ points=[] }) => {
-      let w = textureCanvas.width,
-          h = textureCanvas.height;
+      let w = g2.getCanvas().width,
+          h = g2.getCanvas().height;
       if (! imageData)
          imageData = new ImageData(w, h);
       let data = imageData.data;
@@ -178,6 +186,8 @@ for (let v = -4 ; v <= 4 ; v++)
 
    let draw = view => {
 
+      let g2 = g2LR[view];
+
       // COMPUTE WHERE THE USER'S (LEFT OR RIGHT) EYE IS IN 3D SPACE.
 
       eye = cg.mTransform(clay.inverseRootMatrix,
@@ -195,31 +205,27 @@ for (let v = -4 ; v <= 4 ; v++)
       imageData = null;
       callback(this);
       if (imageData) {
-         textureCanvas.getContext('2d').putImageData(imageData,0,0);
+         g2.getCanvas().getContext('2d').putImageData(imageData,0,0);
 	 return;
       }
 
       items.sort((a,b) => b.z - a.z);
 
       if (outlineCanvas) {
-/*
-         g2.setColor('white');
-         g2.lineWidth(.01);
-         g2.drawRect(0,0,1,1);
-*/
          g2.setColor([1,1,1,.6]);
          g2.fillRect(0,0,1,1);
       }
 
       // THEN THEY ARE DRAWN ONTO THE 2D CANVAS.
 
+      g2.clear();
       for (let n = 0 ; n < items.length ; n++) {
          let item = items[n];
          g2.setColor(item.color);
          switch (item.type) {
          case 'text':
-            g2.textHeight(item.height);
-            g2.fillText(item.text, item.pos[0], item.pos[1], 'center');
+            g2.textHeight(item.height / item.z);
+            g2.text(item.text, item.pos[0], item.pos[1], 'center');
             break;
          case 'line':
             g2.lineWidth(item.lineWidth);
@@ -232,4 +238,3 @@ for (let v = -4 ; v <= 4 ; v++)
       }
    }
 }
-

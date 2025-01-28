@@ -5,19 +5,31 @@ import { lcb, rcb } from "../handle_scenes.js";
 
 // SUPPORT LIBRARY FOR 2D GRAPHICS
 
-function G2() {
+export function G2(do_not_animate_flag=false, canvasWidth=1024, canvasHeight) {
 
-   let context = textureCanvas.getContext('2d');
-   let width   = textureCanvas.width;
-   let height  = textureCanvas.height;
+   let txtrCanvas = document.createElement('canvas');
+   txtrCanvas.width = canvasWidth;
+   txtrCanvas.height = canvasHeight===undefined ? canvasWidth : canvasHeight;
+   txtrCanvas._animate = ! do_not_animate_flag;
+
+   let context = txtrCanvas.getContext('2d');
+   let width   = txtrCanvas.width;
+   let height  = txtrCanvas.height;
+
    let mouseZPrev = false;
    let mouseState = 'move';
-
+/*
    let x2c = x => width * x;
    let y2c = y => height * (1 - y);
    let w2c = w => width * w;
    let h2c = h => height * h;
    let c2w = w => w / width;
+*/
+   let x2c = x => width * (.5 * x + .5);
+   let y2c = y => height * (1 - (.5 * y + .5));
+   let w2c = w => width * (.5 * w);
+   let h2c = h => height * (.5 * h);
+   let c2w = w => (2 * w) / width;
 
    let i2c = i => ('0123456789abcdef').substring(i,i+1);
    let i2h = i => i2c(i >> 4) + i2c(i % 15);
@@ -36,6 +48,10 @@ function G2() {
    context.lineCap = 'round';
 
    let widgets = [];
+
+   this.getCanvas = () => {
+      return txtrCanvas;
+   }
 
    this.addWidget = (obj, type, x, y, color, label, action, size) => {
       switch (type) {
@@ -329,7 +345,7 @@ function G2() {
                       [b[0]-d[0]*r+2*d[1]*r, b[1]-d[1]*r-2*d[0]*r] ]);
    }
    this.clear = () => {
-      context.clearRect(0, 0, screen.width, screen.height);
+      context.clearRect(0, 0, width, height);
    }
    this.computeUVZ = objMatrix => {
       if (! window.vr) {
@@ -346,7 +362,8 @@ function G2() {
    }
    this.drawOval = (x,y,w,h) => {
       context.beginPath();
-      context.arc(x2c(x+w/2), y2c(y+h/2), w2c(w/2), 0, 2 * Math.PI);
+//    context.arc(x2c(x+w/2), y2c(y+h/2), w2c(w/2), 0, 2 * Math.PI);
+      context.ellipse(x2c(x+w/2), y2c(y+h/2), w2c(w/2), h2c(h/2), 0, 0, 2 * Math.PI);
       context.stroke();
    }
    this.drawPath = path => {
@@ -376,7 +393,8 @@ function G2() {
    }
    this.fillOval = (x,y,w,h) => {
       context.beginPath();
-      context.arc(x2c(x+w/2), y2c(y+h/2), w2c(w/2), 0, 2 * Math.PI);
+//    context.arc(x2c(x+w/2), y2c(y+h/2), w2c(w/2), 0, 2 * Math.PI);
+      context.ellipse(x2c(x+w/2), y2c(y+h/2), w2c(w/2), h2c(h/2), 0, 0, 2 * Math.PI);
       context.fill();
    }
    this.fillPath = path => {
@@ -397,21 +415,7 @@ function G2() {
          context.fill();
       }
    }
-   this.fillText = (text,x,y,alignment,rotation) => {
-      context.save();
-      let lines = text.split('\n');
-      let dy = parseFloat(context.font) / height;
-      context.translate(x2c(x), y2c(y-dy/3));
-      if (rotation)
-         context.rotate(-Math.PI/2 * rotation);
-      if (alignment)
-         context.textAlign = alignment;
-      for (let n = 0 ; n < lines.length ; n++, y -= dy) {
-         context.fillText(lines[n],0,h2c(n*dy));
-         context.strokeText(lines[n],0,h2c(n*dy));
-      }
-      context.restore();
-   }
+   this.fillText = (text,x,y,alignment,rotation) => this.text(text,x,y,alignment,rotation);
    this.getContext = () => context;
    this.line = (a,b) => this.drawPath([a,b]);
    this.lineWidth = w => context.lineWidth = width * w;
@@ -425,6 +429,21 @@ function G2() {
          context.fillStyle = context.strokeStyle = isRgba(color) ? rgbaToHex(color[0],color[1],color[2],color[3]) : color;
    }
    let _h = 0.1;
+   this.text = (text,x,y,alignment,rotation) => {
+      context.save();
+      let lines = text.split('\n');
+      let dy = 2 * parseFloat(context.font) / height;
+      context.translate(x2c(x), y2c(y-dy/3));
+      if (rotation)
+         context.rotate(-Math.PI/2 * rotation);
+      if (alignment)
+         context.textAlign = alignment;
+      for (let n = 0 ; n < lines.length ; n++, y -= dy) {
+         context.fillText(lines[n],0,h2c(n*dy));
+         context.strokeText(lines[n],0,h2c(n*dy));
+      }
+      context.restore();
+   }
    this.textHeight = h => { _h = h; context.font = (height * h) + 'px ' + font; }
    this.setFont = f => { font = f; this.textHeight(_h); }
 

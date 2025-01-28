@@ -17,7 +17,7 @@ export const init = async model => {
       dy += gravity;
       if (x > 4 || x < -4)
         dx = -dx;
-      if (y < -4)
+      if (y > 4 || y < -4)
         dy = -dy * .999;
    });
 }
