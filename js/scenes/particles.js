@@ -5,7 +5,7 @@ import * as cg from "../render/core/cg.js";
 // as a single mesh, which requires only one draw call.
 
 export const init = async model => {
-   let N = 5000;
+   let N = 50;
    let particles = model.add('particles').info(N).texture('media/textures/disk.jpg').flag('uTransparentTexture')
 
    let data = [], V = [];

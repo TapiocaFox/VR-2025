@@ -2,6 +2,7 @@ export default () => {
    return {
       enableSceneReloading: true,
       scenes: [ 
+            { name: "ennichi"  , path: "./ennichi.js"  , public: true },
             { name: "example1"  , path: "./example1.js"  , public: true },
             { name: "example2"  , path: "./example2.js"  , public: true },
             { name: "example3"  , path: "./example3.js"  , public: true },
