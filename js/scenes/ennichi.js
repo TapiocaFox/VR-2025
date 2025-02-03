@@ -5,15 +5,17 @@ export const init = async model => {
    model.txtrSrc(1, '../media/textures/chessboard.png');
    // clay.defineMesh('myTerrain', clay.createGrid(30, 30));
    // console.log('clay');
-   console.log(clay);
+   // console.log(clay);
    // let poolMesh = clay.glueMeshes(clay.buildTubeZMesh())
    // clay.defineMesh('myTerrain', );
 //    let terrain = model.add('myTerrain').txtr(1);
    // let terrain = model.add('cube').txtr(1);
    clay.defineMeshFromObjSrc('teapot', '../media/objs/teapot.obj');
    let teapot = model.add('teapot').txtr(1);
+   // let cube = model.add('sphere');
    model.animate(() => {
-      teapot.identity().move(0,1.5,0).turnX(-.1 * Math.PI).scale(.2);
+      teapot.identity().move(0,0.9,0).turnX(-.1 * Math.PI).turnY(model.time).scale(.2);
+      // cube.identity().move(0,1.5,0).turnX(-.1 * Math.PI).scale(.4);
    //    terrain.setVertices((u,v) => [
    //       3*u,                                          // x
    //   2*v-1,                                        // y

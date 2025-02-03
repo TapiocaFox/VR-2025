@@ -226,7 +226,7 @@ export function init(self, gl, canvas) {
 	self.defaultTriangleMeshBuilder = new self.TriangleMeshBuilder();
 
    self.defineMeshFromObjSrc = async (name, objSrc) => {
-      console.log('"defineMeshFromObj" called.');
+      // console.log('"defineMeshFromObj" called.');
       const response = await fetch(objSrc);
       if (!response.ok) {
          throw new Error(`Response status: ${response.status}`);
