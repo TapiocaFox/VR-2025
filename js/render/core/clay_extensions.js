@@ -1,4 +1,5 @@
 import * as clayLib from "./clay.js";
+import * as cg from "./cg.js";
 const Clay = clayLib.Clay;
 
 function TriangleMeshBuilder() {
@@ -223,4 +224,52 @@ export function init(self, gl, canvas) {
 	self.TriangleMeshBuilder = TriangleMeshBuilder;
 	// create and expose a default triangle builder
 	self.defaultTriangleMeshBuilder = new self.TriangleMeshBuilder();
+
+   self.defineMeshFromObjSrc = async (name, objSrc) => {
+      console.log('"defineMeshFromObj" called.');
+      const response = await fetch(objSrc);
+      if (!response.ok) {
+         throw new Error(`Response status: ${response.status}`);
+      }
+      let text = await response.text();
+      let lines = text.split('\n');
+      let vertices = [];
+      let faces = [];
+      let trainglesMeshList = [];
+      lines.forEach((line) => {
+         if(line.startsWith('#')) {
+            return
+         }
+         else if(line.startsWith('v')) {
+            let vertexPos = line.split(' ').slice(1, 4).map(str => parseFloat(str));
+            vertices.push(vertexPos)
+         }
+         else if(line.startsWith('f')) {
+            let faceVertices = line.split(' ').slice(1, 4).map(str => parseInt(str.split('/')[0]));
+            // console.log(faceVertices)
+            faces.push(faceVertices)
+         }
+      })
+      // Vertices are stored in a counter-clockwise order by default, making explicit declaration of face normals unnecessary.
+      faces.forEach(face => {
+         // console.log(face);
+         let pa = vertices[face[0]-1];
+         let pb = vertices[face[1]-1];
+         let pc = vertices[face[2]-1];
+         let normal = cg.normalize(cg.cross(cg.subtract(pb, pa), cg.subtract(pc, pa)));
+         // try {
+         //    // console.log(normal);
+         // }
+         // catch(error) {
+         //    console.error(error);
+         //    console.log('face', face, 'a: ', pa,  'b: ', pb,  'c: ', pc);
+         // }
+         trainglesMeshList.push(pa.concat(normal));
+         trainglesMeshList.push(pb.concat(normal));
+         trainglesMeshList.push(pc.concat(normal));
+      });
+      // console.log(trainglesMeshList);
+
+      return self.defineMesh(name, self.trianglesMesh(trainglesMeshList));
+   }
 }
