@@ -10,11 +10,12 @@ export const init = async model => {
    // clay.defineMesh('myTerrain', );
 //    let terrain = model.add('myTerrain').txtr(1);
    // let terrain = model.add('cube').txtr(1);
-   clay.defineMeshFromObjSrc('teapot', '../media/objs/teapot.obj');
-   let teapot = model.add('teapot').txtr(1);
+   clay.defineMeshFromObjSrc('obj', '../media/objs/pool.obj');
+   // clay.defineMeshFromObjSrc('obj', '../media/objs/teapot.obj');
+   let obj = model.add('obj').txtr(1);
    // let cube = model.add('sphere');
    model.animate(() => {
-      teapot.identity().move(0,0.9,0).turnX(-.1 * Math.PI).turnY(model.time).scale(.2);
+      obj.identity().move(0,1,0).turnX(-.0 * Math.PI).turnY(model.time).scale(.1);
       // cube.identity().move(0,1.5,0).turnX(-.1 * Math.PI).scale(.4);
    //    terrain.setVertices((u,v) => [
    //       3*u,                                          // x

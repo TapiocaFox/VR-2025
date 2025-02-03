@@ -245,9 +245,13 @@ export function init(self, gl, canvas) {
             vertices.push(vertexPos)
          }
          else if(line.startsWith('f')) {
-            let faceVertices = line.split(' ').slice(1, 4).map(str => parseInt(str.split('/')[0]));
-            // console.log(faceVertices)
-            faces.push(faceVertices)
+            let faceVertices = line.split(' ').slice(1).map(str => parseInt(str.split('/')[0]));
+            let firstVertex = [faceVertices[0]];
+            // console.log(faceVertices);
+            for(let i=0; i<faceVertices.length-2; i++) {
+               // console.log(firstVertex.concat(faceVertices.slice(i+1, i+3)))
+               faces.push(firstVertex.concat(faceVertices.slice(i+1, i+3)))
+            } 
          }
       })
       // Vertices are stored in a counter-clockwise order by default, making explicit declaration of face normals unnecessary.
@@ -256,6 +260,7 @@ export function init(self, gl, canvas) {
          let pa = vertices[face[0]-1];
          let pb = vertices[face[1]-1];
          let pc = vertices[face[2]-1];
+         // let normal = cg.cross(cg.subtract(pb, pa), cg.subtract(pc, pa));
          let normal = cg.normalize(cg.cross(cg.subtract(pb, pa), cg.subtract(pc, pa)));
          // try {
          //    // console.log(normal);
@@ -269,7 +274,7 @@ export function init(self, gl, canvas) {
          trainglesMeshList.push(pc.concat(normal));
       });
       // console.log(trainglesMeshList);
-
+      trainglesMeshList.name = name
       return self.defineMesh(name, self.trianglesMesh(trainglesMeshList));
    }
 }
