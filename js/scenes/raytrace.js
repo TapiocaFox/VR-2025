@@ -10,6 +10,9 @@
 
 export const init = async model => {
    let screen = model.add('cube');
+   // clay.defineMeshFromObjSrc('teapot', '../media/objs/teapot.obj');
+   // let teapot = model.add('teapot').txtr(1);
+   
    let isHUD = false;
    model.control('h', 'toggle HUD', () => isHUD = ! isHUD);
 

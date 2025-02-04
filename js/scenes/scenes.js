@@ -3,6 +3,9 @@ export default () => {
       enableSceneReloading: true,
       scenes: [ 
             { name: "ennichi"  , path: "./ennichi.js"  , public: true },
+            { name: "obj_mesh"  , path: "./obj_mesh.js"  , public: true },
+            { name: "obj_intersect" , path: "./obj_intersect.js" , public: true },
+
             { name: "example1"  , path: "./example1.js"  , public: true },
             { name: "example2"  , path: "./example2.js"  , public: true },
             { name: "example3"  , path: "./example3.js"  , public: true },
@@ -15,7 +18,6 @@ export default () => {
             { name: "simple"    , path: "./simple.js"    , public: true },
             { name: "pinscreen" , path: "./pinscreen.js" , public: true },
             { name: "opacity"   , path: "./opacity.js"   , public: true },
-            { name: "intersect" , path: "./intersect.js" , public: true },
             { name: "shaders"   , path: "./shaders.js"   , public: true },
             { name: "raytrace"  , path: "./raytrace.js"  , public: true },
             { name: "particles" , path: "./particles.js" , public: true },
