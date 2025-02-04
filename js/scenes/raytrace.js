@@ -22,7 +22,7 @@ export const init = async model => {
          model.hud();
       else
          model.setMatrix([m[0],m[4],m[8],0,m[1],m[5],m[9],0,m[2],m[6],m[10],0,0,1.6,-1,1]);
-      model.scale(.4,.4,.0001);
+      model.scale(1,1,.0001);
 
       model.flag('uRayTrace');
       model.setUniform('4fv','uL', [.5,.5,.5,1., -.5,-.5,-.5,.2, .7,-.7,0,.2, -.7,.7,0,.2]);

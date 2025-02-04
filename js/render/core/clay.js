@@ -735,7 +735,7 @@ let renderParticlesMesh = mesh => {
    let order = [];
    for (let i = 0 ; i < N ; i++)
       order.push(i);
-   order.sort((a,b) => cg.dot(Z,data[a].p) - cg.dot(Z,data[b].p));
+   order.sort((a,b) => cg.dot(Z,data[a]?data[a].p: -1) - cg.dot(Z,data[b]?data[b].p: -1));
 
 /*
    Need to add an option for p to be 2 points.
@@ -775,6 +775,7 @@ let renderParticlesMesh = mesh => {
          mesh[16 * j + k] = V[k];
    }
    for (let i = 0 ; i < N ; i++) {
+      if(!data[order[i]]) continue;
       let d = data[order[i]];
       let p = d.p;
       let n = d.n;
@@ -2309,6 +2310,10 @@ function Node(_form) {
       child._flags  = null;
       child._customShader = null;
       this.dataTree.children.push(child.dataTree);
+
+      if (form == 'label')
+         child.txtrSrc(15, 'media/textures/fixed-width-font.png');
+
       return child;
    }
 
@@ -2758,9 +2763,14 @@ function Node(_form) {
             rounded: this.prop('_bevel'),
             sign: 1,
             symmetry: 0,
+/*
             texture: form == 'label' ? DEFAULT_FONT
                                      : this.prop('_texture'),
             txtr: this.prop('_txtr'),
+*/
+            texture: this.prop('_texture'),
+            txtr: form == 'label' ? 15 : this.prop('_txtr'),
+
             bumpTexture: this.prop('_bumpTexture'),
             bumptxtr: this.prop('_bumptxtr'),
             form: form,
@@ -2845,6 +2855,7 @@ window._canvas_txtr = [];
 // EXPOSE A ROOT NODE FOR EXTERNAL MODELING.
 
    let root = new Node('root');
+
    this.root = () => root;
    this.inverseRootMatrix = cg.mIdentity();
    this.vrWidgets = root.add();

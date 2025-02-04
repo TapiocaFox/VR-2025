@@ -5,8 +5,10 @@ import * as cg from "../render/core/cg.js";
 // as a single mesh, which requires only one draw call.
 
 export const init = async model => {
-   let N = 50;
-   let particles = model.add('particles').info(N).texture('media/textures/disk.jpg').flag('uTransparentTexture')
+   const N = 5000;
+
+   model.txtrSrc(2, 'media/textures/disk.jpg');
+   let particles = model.add('particles').info(N).txtr(2).flag('uTransparentTexture').scale(2);
 
    let data = [], V = [];
    for (let n = 0 ; n < N ; n++) {
@@ -32,7 +34,7 @@ export const init = async model => {
          }
 	 data[n].p = cg.scale(cg.normalize(data[n].p), .5);
       }
-      particles.setParticles(data /*, 'yaw' */);
+      particles.setParticles(data);
    });
 }
 
