@@ -7,8 +7,8 @@ import * as cg from "../render/core/cg.js";
 export const init = async model => {
    const N = 5000;
 
-   model.txtrSrc(1, 'media/textures/disk.jpg');
-   let particles = model.add('particles').info(N).txtr(1).flag('uTransparentTexture').scale(2);
+   model.txtrSrc(2, 'media/textures/disk.jpg');
+   let particles = model.add('particles').info(N).txtr(2).flag('uTransparentTexture').scale(2);
 
    let data = [], V = [];
    for (let n = 0 ; n < N ; n++) {

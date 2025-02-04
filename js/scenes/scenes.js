@@ -21,6 +21,8 @@ export default () => {
 
             { name: "controllerBeam" , path: "./controllerBeam.js" , public: true },
             { name: "diagram1"       , path: "./diagram1.js"       , public: true },
+            { name: "clock"          , path: "./clock.js"          , public: true },
+            { name: "particleNoise"  , path: "./particleNoise.js"  , public: true },
       ]
    };
 }
