@@ -2,6 +2,10 @@ export default () => {
    return {
       enableSceneReloading: true,
       scenes: [ 
+            { name: "ennichi"  , path: "./ennichi.js"  , public: true },
+            { name: "obj_mesh"  , path: "./obj_mesh.js"  , public: true },
+            { name: "obj_intersect" , path: "./obj_intersect.js" , public: true },
+
             { name: "example1"  , path: "./example1.js"  , public: false },
             { name: "example2"  , path: "./example2.js"  , public: false },
             { name: "example3"  , path: "./example3.js"  , public: false },
