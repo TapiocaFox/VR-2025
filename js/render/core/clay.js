@@ -2310,6 +2310,10 @@ function Node(_form) {
       child._flags  = null;
       child._customShader = null;
       this.dataTree.children.push(child.dataTree);
+
+      if (form == 'label')
+         child.txtrSrc(15, 'media/textures/fixed-width-font.png');
+
       return child;
    }
 
