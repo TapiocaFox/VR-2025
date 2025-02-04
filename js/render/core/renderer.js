@@ -538,6 +538,7 @@ vec3 lighting_contribution(
     if (uTransparentTexture == 1) {
        rgb = 5. * ambient;
        a *= max(0., 1. - (t.r + t.g + t.b) / 3.);
+       a = 1. - (t.r + t.g + t.b) / 3.;
     }
     return vec4(rgb, a);
  }  
@@ -726,6 +727,8 @@ vec3 lighting_contribution(
 ` + CUSTOM_FRAG_SHADER_CODE_MARKER + `
     }
     
+    if (opacity == 0.)
+       discard;
        
     fragColor = (
       (vec4(sqrt(color * vRGB), 1.0) * isLit)

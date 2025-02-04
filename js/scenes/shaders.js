@@ -22,20 +22,24 @@ export const init = async model => {
    model.animate(() => {
       box1.flag('uNoiseTexture');
       box2.flag('uStripeTexture');
+      box2.flag('uMakeItBlue');
 
       model.customShader(`
          uniform int uNoiseTexture;	// Put any declarations or functions
          uniform int uStripeTexture;    // before the dashed line.
+         uniform int uMakeItBlue;
          --------------------------
          if (uNoiseTexture == 1)
-            color *= .5 + noise(3. * vAPos);
+            color *= (.5 + noise(2. * vAPos + .5*uTime)) * vec3(.1,.5,1.);
          if (uStripeTexture == 1)
-            color *= .5 + .5 * sin(10. * vAPos.x);
+            color *= .5 + .5 * sin(30. * vAPos.x * vAPos.y * vAPos.z + 3.*uTime);
+         if (uMakeItBlue == 1)
+            color *= vec3(0.,.3,1.);
       `);
 
-      box0.identity().move(-.4,1.6,0).turnY(model.time).turnX(model.time).scale(.1);
-      box1.identity().move( .0,1.6,0).turnY(model.time).turnX(model.time).scale(.1);
-      box2.identity().move( .4,1.6,0).turnY(model.time).turnX(model.time).scale(.1);
+      box0.identity().move(-.6,1.6,0).turnY(.1*model.time).turnX(.1*model.time).scale(.2);
+      box1.identity().move( .0,1.6,0).turnY(.1*model.time).turnX(.1*model.time).scale(.2);
+      box2.identity().move( .6,1.6,0).turnY(.1*model.time).turnX(.1*model.time).scale(.2);
    });
 }
 
