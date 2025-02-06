@@ -800,7 +800,7 @@ let createSquareMesh = (i,j,k, z) => {
    let N = []; N[i] = z < 0 ? -1 : 1; N[j] = 0; N[k] = 0;
 
    let V = [];
-   let s = i==2 == z>0;
+   let s = i==2 == z>=0;
    V.push(vertexArray( A, N, [1,0,0], [s?0:0, s?0:1] ));
    V.push(vertexArray( B, N, [1,0,0], [s?0:1, s?1:1] ));
    V.push(vertexArray( C, N, [1,0,0], [s?1:0, s?0:0] ));

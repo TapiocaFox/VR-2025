@@ -5,12 +5,12 @@ export const init = async model => {
       draw.save();
          draw.move(0,.05,0);
          draw.scale(.06);
-         draw.text({ color: '#ff2020', text: 'Animated\ndiagram\n' });
+         draw.text({ color: '#ff2020', text: 'My\nanimated\ndiagram\n' });
       draw.restore();
 
       draw.save();
          draw.scale(.4);
-         draw.cube({ color: 'white', lineWidth: .003 });
+         draw.cube({ color: 'white', lineWidth: .001 });
       draw.restore();
 
       draw.save();

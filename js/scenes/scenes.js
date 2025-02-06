@@ -23,6 +23,8 @@ export default () => {
             { name: "diagram1"       , path: "./diagram1.js"       , public: true },
             { name: "clock"          , path: "./clock.js"          , public: true },
             { name: "particleNoise"  , path: "./particleNoise.js"  , public: true },
+
+            { name: "g2Example1" , path: "./g2Example1.js" , public: true },
       ]
    };
 }
