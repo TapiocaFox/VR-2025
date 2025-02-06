@@ -12,7 +12,7 @@ export const init = async model => {
 
    model.animate(() => {
 
-      // INTRO IS TWO SIZES OF TEXT IN ARIAL FONT.
+      // INTRO IS IN TWO DIFFERENT SIZES OF TEXT, USING ARIAL FONT.
 
       intro.setFont('Arial');
       intro.setColor([.5,.7,1]);
@@ -23,13 +23,13 @@ export const init = async model => {
       intro.textHeight(.05);
       intro.text('This is my cool\nnew game.', -.3,0);
 
-      introObj.identity().move(0,1.7,0).scale(.4,.4,.00001);
+      introObj.identity().move(0,1.7,0).scale(.4);
 
-      // FRAME-BY-FRAME SCORE IS LARGE TEXT IN DEFAULT COURIER FONT.
+      // FRAME-BY-FRAME SCORE IS CENTERED, USING DEFAULT (COURIER) FONT.
 
-      score.clear();
+      score.clear();           // CLEAR THE ANIMATED CANVAS BEFORE DRAWING.
       score.setColor([1,0,0]);
       score.text('Score = ' + (model.time>>0), 0,0, 'center');
-      scoreObj.identity().move(0,1.3,0).scale(.4,.4,.00001);
+      scoreObj.identity().move(0,1.3,0).scale(.4);
    });
 }
