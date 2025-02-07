@@ -538,7 +538,6 @@ vec3 lighting_contribution(
     if (uTransparentTexture == 1) {
        rgb = 5. * ambient;
        a *= max(0., 1. - (t.r + t.g + t.b) / 3.);
-       a = 1. - (t.r + t.g + t.b) / 3.;
     }
     return vec4(rgb, a);
  }  
