@@ -2321,7 +2321,7 @@ function Node(_form) {
       child._customShader = null;
       this.dataTree.children.push(child.dataTree);
       if (form == 'label')
-         child.txtrSrc(15, 'media/textures/fixed-width-font.png');
+         child.txtr(15);
       return child;
    }
 
@@ -2878,6 +2878,7 @@ window._canvas_txtr = [];
    };
    let videoScreen1 = root.add('cube').texture('camera').scale(0);
    this.model = root.add();
+   this.model.txtrSrc(15, DEFAULT_FONT);
    let videoScreen2 = root.add('cube').texture('camera').scale(0);
    let anidrawScreen = root.add('cube').texture('anidraw');
    let anidrawSlant = 0;
