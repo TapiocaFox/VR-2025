@@ -2320,8 +2320,6 @@ function Node(_form) {
       child._flags  = null;
       child._customShader = null;
       this.dataTree.children.push(child.dataTree);
-      if (form == 'label')
-         child.txtr(15);
       return child;
    }
 
