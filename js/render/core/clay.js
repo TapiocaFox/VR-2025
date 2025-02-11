@@ -49,6 +49,9 @@ export function MeshInfo() {
 
 let debug = false;
 
+// A hashmap to keep track of the texture that needs to be bind
+window.txtrMap = new Map();
+
 export function Clay(gl, canvas) {
    this.debug = state => debug = state;
 
@@ -800,7 +803,7 @@ let createSquareMesh = (i,j,k, z) => {
    let N = []; N[i] = z < 0 ? -1 : 1; N[j] = 0; N[k] = 0;
 
    let V = [];
-   let s = i==2 == z>0;
+   let s = i==2 == z>=0;
    V.push(vertexArray( A, N, [1,0,0], [s?0:0, s?0:1] ));
    V.push(vertexArray( B, N, [1,0,0], [s?0:1, s?1:1] ));
    V.push(vertexArray( C, N, [1,0,0], [s?1:0, s?0:0] ));
@@ -1871,6 +1874,13 @@ let fl = 5;                                                          // CAMERA F
    this.controllerBallSize = 0.02;
 
    this.animate = view => {
+      if (window.gltfLoadCount !== undefined)
+      {
+         if (window.gltfLoadCount > 0 && window.txtrMap !== undefined)
+            for (let [key, val] of window.txtrMap)
+               this.txtrCallback(key, val[0], val[1]);
+         window.gltfLoadCount--;
+      }
       window.timestamp++;
       window.needUpdateInput = true;
       window.mySharedObj = [];
@@ -2310,10 +2320,6 @@ function Node(_form) {
       child._flags  = null;
       child._customShader = null;
       this.dataTree.children.push(child.dataTree);
-
-      if (form == 'label')
-         child.txtrSrc(15, 'media/textures/fixed-width-font.png');
-
       return child;
    }
 
@@ -2827,6 +2833,8 @@ function Node(_form) {
       return this;
    }
    this.txtrSrc = (txtr, src, do_not_animate) => {
+      window.txtrMap.set(txtr, [src, do_not_animate]);
+
       if (typeof src == 'string') {               // IF THE TEXTURE SOURCE IS AN IMAGE FILE,
          let image = new Image();                 // IT ONLY NEEDS TO BE SENT TO THE GPU ONCE.
          image.onload = () => {
@@ -2837,6 +2845,7 @@ function Node(_form) {
             gl.texParameteri (gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
          }
          image.src = src;
+	 delete _canvas_txtr[txtr];
       }
       else {                                      // FOR ANY OTHER TEXTURE SOURCE,
          if (! src._animate)
@@ -2867,6 +2876,7 @@ window._canvas_txtr = [];
    };
    let videoScreen1 = root.add('cube').texture('camera').scale(0);
    this.model = root.add();
+   this.model.txtrSrc(15, DEFAULT_FONT);
    let videoScreen2 = root.add('cube').texture('camera').scale(0);
    let anidrawScreen = root.add('cube').texture('anidraw');
    let anidrawSlant = 0;
@@ -2892,6 +2902,9 @@ window._canvas_txtr = [];
    window.editText = new EditText();
    window.codeEditorObj = root.add();
    window.codeEditor = new CodeEditor(codeEditorObj);
+
+   // Call the txtr function
+   this.txtrCallback = (txtr, src, do_not_animate) => model.txtrSrc(txtr, src, do_not_animate);
 
    // NOTE(KTR): Extensions
 

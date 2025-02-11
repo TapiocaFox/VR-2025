@@ -42,8 +42,8 @@ export const init = async model => {
       for (let n = 0 ; n < N ; n++) {
          let v = V[n];
 
-	 for (let i = 0 ; i < 3 ; i++)
-	    if (Math.abs(v[i]) > .5 - .045) v[i] = (.5 - .045) * Math.sign(v[i]);
+         for (let i = 0 ; i < 3 ; i++)
+            if (Math.abs(v[i]) > .5 - .045) v[i] = (.5 - .045) * Math.sign(v[i]);
 
 	 let x = v[0], y = v[1], z = v[2];
 

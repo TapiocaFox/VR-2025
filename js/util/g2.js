@@ -473,14 +473,14 @@ export function G2(do_not_animate_flag=false, canvasWidth=512, canvasHeight) {
       context.translate(x2c(x),y2c(1-y));
       context.scale(w,h);
          this.setColor('black');
-         this.fillOval(0,0,1,1);
+         this.fillOval(-1,-1,2,2);
          this.setColor('white');
-         this.fillOval(.01,.01,.98,.98);
+         this.fillOval(-.99,-.99,1.98,1.98);
          this.setColor('black');
          let c = t => Math.cos(2 * Math.PI * t);
          let s = t => Math.sin(2 * Math.PI * t);
          for (let n = 1 ; n <= 12 ; n++)
-            this.fillText('' + n, .5 + .43 * s(n/12), .5 + .42 * c(n/12), 'center');
+            this.fillText('' + n, .86 * s(n/12), .84 * c(n/12), 'center');
 
          let now = new Date();
          let hour = now.getHours();
@@ -488,15 +488,15 @@ export function G2(do_not_animate_flag=false, canvasWidth=512, canvasHeight) {
          let second = now.getSeconds();
          let clockHand = (w,t,r) => {
             this.lineWidth(w);
-            this.arrow([.5,.5], [.5 + r * s(t), .5 + r * c(t) ]);
+            this.arrow([0,0], [ r * s(t), r * c(t) ]);
          }
-         clockHand(.023, (hour   + minute / 60) / 12, .23);
-         clockHand(.015, (minute + second / 60) / 60, .32);
-         clockHand(.010,           second / 60      , .42);
+         clockHand(.042, (hour   + minute / 60) / 12, .49);
+         clockHand(.027, (minute + second / 60) / 60, .64);
+         clockHand(.018,           second / 60      , .84);
       context.restore();
    }
 
-   this.textHeight(.05);
+   this.textHeight(.1);
 }
 
 export let g2 = new G2();
