@@ -24,12 +24,18 @@ export default () => {
             { name: "raytrace"  , path: "./raytrace.js"  , public: false },
             { name: "particles" , path: "./particles.js" , public: false },
 
-            { name: "controllerBeam" , path: "./controllerBeam.js" , public: true },
-            { name: "diagram1"       , path: "./diagram1.js"       , public: true },
-            { name: "clock"          , path: "./clock.js"          , public: true },
-            { name: "particleNoise"  , path: "./particleNoise.js"  , public: true },
+            { name: "controllerBeam" , path: "./controllerBeam.js" , public: false },
+            { name: "diagram1"       , path: "./diagram1.js"       , public: false },
+            { name: "clock"          , path: "./clock.js"          , public: false },
+            { name: "particleNoise"  , path: "./particleNoise.js"  , public: false },
 
-            { name: "g2Example1" , path: "./g2Example1.js" , public: true },
+            { name: "hud"           , path: "./hud.js"           , public: true },
+            { name: "g2Example1"    , path: "./g2Example1.js"    , public: true },
+            { name: "intersect2"    , path: "./intersect2.js"    , public: true },
+            { name: "large_texture" , path: "./large_texture.js" , public: true },
+            { name: "combineMeshes" , path: "./combineMeshes.js" , public: true },
+            { name: "widgets"       , path: "./widgets.js"       , public: true },
+            { name: "statue"        , path: "./statue.js"        , public: true },
       ]
    };
 }

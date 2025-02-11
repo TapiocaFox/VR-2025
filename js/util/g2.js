@@ -7,6 +7,8 @@ import { lcb, rcb } from "../handle_scenes.js";
 
 export function G2(do_not_animate_flag=false, canvasWidth=512, canvasHeight) {
 
+   let g2 = this;
+
    let txtrCanvas = document.createElement('canvas');
    txtrCanvas.width = canvasWidth;
    txtrCanvas.height = canvasHeight===undefined ? canvasWidth : canvasHeight;
@@ -45,9 +47,9 @@ export function G2(do_not_animate_flag=false, canvasWidth=512, canvasHeight) {
 
    let widgets = [];
 
-   this.getCanvas = () => {
-      return txtrCanvas;
-   }
+   this.getCanvas = () => txtrCanvas;
+
+   this.setAnimate = true_or_false => { txtrCanvas._animate = true_or_false; return this; }
 
    this.addWidget = (obj, type, x, y, color, label, action, size) => {
       switch (type) {
@@ -86,12 +88,24 @@ export function G2(do_not_animate_flag=false, canvasWidth=512, canvasHeight) {
          activeWidget.handleEvent();
       if (activeWidget && activeWidget.handleKeyEvent)
          activeWidget.handleKeyEvent();
+
+      if (txtrCanvas._animate || renderCount++ == 0) {
+         this.clear();
+         this.render();
+      }
+
+      return this.drawWidgets();
    }
 
-   this.drawWidgets = obj => {
+   let renderCount = 0;
+
+   this.isActiveWidget = () => activeWidget != null;
+   
+   this.render = () => {}
+
+   this.drawWidgets = () => {
       for (let n = 0 ; n < widgets.length ; n++)
-         if (widgets[n].obj == obj)
-            widgets[n].draw();
+         widgets[n].draw();
       return activeWidget != null;
    }
 
@@ -126,11 +140,11 @@ export function G2(do_not_animate_flag=false, canvasWidth=512, canvasHeight) {
       }
       this.draw = () => {
          let isPressed = this == activeWidget && (mouseState == 'press' || mouseState == 'drag');
-         g2.textHeight(.09 * size);
+         g2.textHeight(.045 * size);
          g2.setColor(color, isPressed ? .5 : this.isWithin() ? .7 : 1);
          g2.fillRect(x-w/2, y-h/2, w, h);
          g2.setColor('black');
-         g2.fillText(Array.isArray(label) ? label[this.state] : label, x, y, 'center');
+         g2.text(Array.isArray(label) ? label[this.state] : label, x, y, 'center');
          drawWidgetOutline(x,y,w,h, isPressed);
       }
    }
@@ -162,7 +176,8 @@ export function G2(do_not_animate_flag=false, canvasWidth=512, canvasHeight) {
          g2.setColor(color, isPressed ? .375 : this.isWithin() ? .475 : .5);
          g2.fillRect(x-w/2, y-h/2, w * value, h);
          g2.setColor('black');
-         g2.fillText(label, x, y, 'center');
+         g2.textHeight(.045 * size);
+         g2.text(label, x, y, 'center');
          drawWidgetOutline(x,y,w,h, isPressed);
       }
    }
@@ -213,13 +228,13 @@ export function G2(do_not_animate_flag=false, canvasWidth=512, canvasHeight) {
       }
       this.draw = () => {
          context.save();
-         context.font = (height * .09 * size) + 'px ' + font;
+         context.font = (height * .07 * size) + 'px ' + font;
          g2.setColor(color, this.isWithin() ? .7 : 1);
          g2.fillRect(x-w/2, y-h/2, w, h);
          g2.setColor('black');
-         g2.fillText(text, x, y, 'center');
+         g2.text(text, x, y, 'center');
          if (this == activeWidget) { // IF THIS IS THE ACTIVE WIDGET, THEN DRAW THE CURSOR.
-            let cx = x + .053 * size * (cursor - text.length/2);
+            let cx = x + .085 * size * (cursor - text.length/2);
             g2.fillRect(cx - .005 * size, y - h/2, .01 * size, h);
          }
          drawWidgetOutline(x,y,w,h, true);
@@ -255,7 +270,7 @@ export function G2(do_not_animate_flag=false, canvasWidth=512, canvasHeight) {
          g2.fillRect(x-w/2 + w*value[0] - .005 * size, y-h/2, .01 * size, h);
          g2.fillRect(x-w/2, y-h/2 + h*value[1] - .005 * size, w, .01 * size);
          g2.setColor('black');
-         g2.fillText(label, x, y, 'center');
+         g2.text(label, x, y + .7 * w, 'center');
          drawWidgetOutline(x,y,w,h, isPressed);
       }
    }
@@ -358,7 +373,6 @@ export function G2(do_not_animate_flag=false, canvasWidth=512, canvasHeight) {
    }
    this.drawOval = (x,y,w,h) => {
       context.beginPath();
-//    context.arc(x2c(x+w/2), y2c(y+h/2), w2c(w/2), 0, 2 * Math.PI);
       context.ellipse(x2c(x+w/2), y2c(y+h/2), w2c(w/2), h2c(h/2), 0, 0, 2 * Math.PI);
       context.stroke();
    }
@@ -389,7 +403,6 @@ export function G2(do_not_animate_flag=false, canvasWidth=512, canvasHeight) {
    }
    this.fillOval = (x,y,w,h) => {
       context.beginPath();
-//    context.arc(x2c(x+w/2), y2c(y+h/2), w2c(w/2), 0, 2 * Math.PI);
       context.ellipse(x2c(x+w/2), y2c(y+h/2), w2c(w/2), h2c(h/2), 0, 0, 2 * Math.PI);
       context.fill();
    }
@@ -435,6 +448,7 @@ export function G2(do_not_animate_flag=false, canvasWidth=512, canvasHeight) {
       if (alignment)
          context.textAlign = alignment;
       for (let n = 0 ; n < lines.length ; n++, y -= dy) {
+         context.lineWidth = _h / 6;
          context.fillText(lines[n],0,h2c(n*dy));
          context.strokeText(lines[n],0,h2c(n*dy));
       }
@@ -470,7 +484,7 @@ export function G2(do_not_animate_flag=false, canvasWidth=512, canvasHeight) {
 
    this.clock = (x,y,w,h) => {
       context.save();
-      context.translate(x2c(x),y2c(1-y));
+      context.translate(x2c(x),y2c(y+1));
       context.scale(w,h);
          this.setColor('black');
          this.fillOval(-1,-1,2,2);
@@ -479,8 +493,9 @@ export function G2(do_not_animate_flag=false, canvasWidth=512, canvasHeight) {
          this.setColor('black');
          let c = t => Math.cos(2 * Math.PI * t);
          let s = t => Math.sin(2 * Math.PI * t);
+         this.textHeight(.1);
          for (let n = 1 ; n <= 12 ; n++)
-            this.fillText('' + n, .86 * s(n/12), .84 * c(n/12), 'center');
+            this.text('' + n, .86 * s(n/12), .84 * c(n/12), 'center');
 
          let now = new Date();
          let hour = now.getHours();
@@ -496,7 +511,7 @@ export function G2(do_not_animate_flag=false, canvasWidth=512, canvasHeight) {
       context.restore();
    }
 
-   this.textHeight(.1);
+   this.textHeight(.05);
 }
 
 export let g2 = new G2();
