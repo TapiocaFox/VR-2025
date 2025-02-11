@@ -89,30 +89,31 @@ export const init = async model => {
       const isBad = Math.random() < badAppleRatio;
       interactableObjs.push(buildIBall(`${isBad?'Bad':'Good'}`, 0.085, [randomFromInterval(-2, 2), 0, randomFromInterval(-2, 2)], randomFromInterval(0, Math.PI), isBad));
    }
-   
+
    const iSubSys = new interactive.InteractiveSystem(model, interactableObjs, buttonState, joyStickState, lcb, rcb);
+
+   const lcs = iSubSys.controllerStates[interactive.Controller.Left];
+   const rcs = iSubSys.controllerStates[interactive.Controller.Right];
+
+   right_g2.render = function() {
+      const rightControllerIObj = rcs.interactingWithIObj;
+      const right_debug_text = `Put Apple on\nthe table.\nApple Type: \n> ${rightControllerIObj?rightControllerIObj.name:'None'}\nPos: \n${rightControllerIObj?rightControllerIObj.pos.map(it => {return it.toFixed(2);}):'None'}\nonTable: ${rightControllerIObj?isPositionOnTheTable(rightControllerIObj.pos):'None'}\nScore: ${score}`;
+      this.textHeight(.05);
+      this.text(right_debug_text, 0.0, 0.0);
+   };
+
+   left_g2.render = function() {
+      const leftControllerIObj = lcs.interactingWithIObj;
+      const left_debug_text = `Put Apple on\nthe table.\nApple Type: \n> ${leftControllerIObj?leftControllerIObj.name:'None'}\nPos: \n${leftControllerIObj?leftControllerIObj.pos.map(it => {return it.toFixed(2);}):'None'}\nonTable: ${leftControllerIObj?isPositionOnTheTable(leftControllerIObj.pos):'None'}\nScore: ${score}`;
+      left_g2.textHeight(.05);
+      left_g2.text(left_debug_text, 0.0, 0.0);
+   };
 
    model.animate(() => {
       table.identity().move(0,0,-1).turnX(.01 * Math.PI).scale(1);
       iSubSys.update();
 
-      const lcs = iSubSys.controllerStates[interactive.Controller.Left];
-      const rcs = iSubSys.controllerStates[interactive.Controller.Right];
-
-      const leftControllerIObj = lcs.interactingWithIObj;
-      const rightControllerIObj = rcs.interactingWithIObj;
-
-      const left_debug_text = `Put Apple on\nthe table.\nApple Type: \n> ${leftControllerIObj?leftControllerIObj.name:'None'}\nPos: \n${leftControllerIObj?leftControllerIObj.pos.map(it => {return it.toFixed(2);}):'None'}\nonTable: ${leftControllerIObj?isPositionOnTheTable(leftControllerIObj.pos):'None'}\nScore: ${score}`;
-      const right_debug_text = `Put Apple on\nthe table.\nApple Type: \n> ${rightControllerIObj?rightControllerIObj.name:'None'}\nPos: \n${rightControllerIObj?rightControllerIObj.pos.map(it => {return it.toFixed(2);}):'None'}\nonTable: ${rightControllerIObj?isPositionOnTheTable(rightControllerIObj.pos):'None'}\nScore: ${score}`;
-      
-      left_g2.clear();
-      left_g2.textHeight(.05);
-      left_g2.text(left_debug_text, 0.0, 0.0);
       left_g2.update();
-
-      right_g2.clear();
-      right_g2.textHeight(.05);
-      right_g2.text(right_debug_text, 0.0, 0.0);
       right_g2.update();
       
       const lbm = lcs.beamMatrix;
@@ -122,6 +123,7 @@ export const init = async model => {
       const lz = lbm.slice( 8, 11);
       const lxy = cg.normalize([lz[0], 0, lz[2]]);
       left_debug_panel.identity().move(cg.add(lo, [-0.2*lxy[0], 0.05, -0.2*lxy[2]])).scale(.1).aimZ(lxy);
+      // left_debug_panel.identity().move(lo).scale(.1);
 
       const rbm = rcs.beamMatrix;
       const ro = rbm.slice(12, 15);
