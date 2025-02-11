@@ -2,6 +2,7 @@ export default () => {
    return {
       enableSceneReloading: true,
       scenes: [ 
+            { name: "bad_apple"  , path: "./bad_apple.js"  , public: true },
             { name: "ennichi"  , path: "./ennichi.js"  , public: true },
             { name: "obj_mesh"  , path: "./obj_mesh.js"  , public: true },
             { name: "obj_intersect" , path: "./obj_intersect.js" , public: true },
