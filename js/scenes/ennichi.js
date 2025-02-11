@@ -23,7 +23,7 @@ export const init = async model => {
    let wall_to = [8, 10, 8];
 
    let obj = model.add('obj');
-   let ball = model.add('sphere').scale(ballRadius).move(ballPosition);
+   let ball = model.add('sphere').scale(ballRadius);
    // let terrain = model.add('terrain').move(0,2,-3.5).scale(4.5, 3., 1.5).txtr(1);
    
    const interactableObjs = [
@@ -32,22 +32,25 @@ export const init = async model => {
          obj: ball,
          pos: [0, 1, -2],
          detectionRadius: ballRadius,
-         onIdle: () => {},
-         onMoving: () => {},
-         onHit: () => {},
-         onGrab: () => {},
-         onUnGrab: () => {},
-         onDrag: () => {},
-         onUnDrag: () => {},
+         onIdle: function () {},
+         onMoving: function () {},
+
+         onHit: function () { this.obj.color([1,.5,.5]); },
+         onGrab: function () { this.obj.color([1,0,0]);},
+         onDrag: function () { this.obj.color([0,1,0]); },
+         onUnDrag: function () { this.obj.color([1,0,0]); },
+         onUnGrab: function () { this.obj.color([1,.5,.5]); },
+         onUnHit: function () { this.obj.color('white'); },
       }
    ];
    
-   const iSys = new interactive.InteractiveSystem(interactableObjs, buttonState, joyStickState, lcb, rcb);
+   const iSys = new interactive.InteractiveSystem(model, interactableObjs, buttonState, joyStickState, lcb, rcb);
 
    model.animate(() => {
       obj.identity().move(0,0.5,-1).turnX(.01 * Math.PI).scale(.1);
       
-      const debug_text = `pointOnBeam: \n  ${pointOnBeam.map(it=>it.toFixed(1))}\nisHit: ${isHit}\nisPressed: ${isPressed}`;
+      // const debug_text = `pointOnBeam: \n  ${pointOnBeam.map(it=>it.toFixed(1))}\nisHit: ${isHit}\nisPressed: ${isPressed}`;
+      const debug_text = `None`;
       // console.log(debug_text);
       g2.clear();
       g2.text(debug_text, 0.0, 0.0);
@@ -55,11 +58,7 @@ export const init = async model => {
       // g2.update();
       debug_panel.txtr(2);
 
-      if (isHit & isPressed)
-	      ballPosition = pointOnBeam;
-
-      ball.color(isHit ? isPressed ? [1,0,0] : [1,.5,.5] : [1,1,1]);
-      ball.identity().move(ballPosition).scale(ballRadius);
+      // ball.identity().move(ballPosition).scale(ballRadius);
 
       iSys.update();
       

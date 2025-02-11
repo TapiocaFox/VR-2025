@@ -14,7 +14,8 @@ const Controller = Object.freeze({
 });
 
 export class InteractiveSystem {
-    constructor(interactableObjs, buttonState, joyStickState, leftControllerBeam, rightControllerBeam) {
+    constructor(model, interactableObjs, buttonState, joyStickState, leftControllerBeam, rightControllerBeam) {
+        this.model = model;
         this.interactableObjs = interactableObjs;
         this.buttonState = buttonState;
 
@@ -26,33 +27,43 @@ export class InteractiveSystem {
         this.controllerStates = {};
         this.controllerStates[Controller.Left] = {
             beamMatrix: null,
-            interactWithObj: null,
+            interactingWithIObj: null,
             buttonState: buttonState.left,
             joyStickState: joyStickState.left,
         }; 
         this.controllerStates[Controller.Right] = {
             beamMatrix: null,
-            interactWithObj: null,
+            interactingWithIObj: null,
             buttonState: buttonState.right,
             joyStickState: joyStickState.right,
         }; 
 
         this.interactableObjs.forEach(iObj => {
-            iObj.lastNState = [];
+            iObj.timestamp = -1;
+            iObj.lastNStates = [];
 
-            iObj.hitGrabDragState = {
-                isHit: false,
-                isGrabbed: false,
-                isDragged: false,
+            iObj.controllerInteractions = {
+                isBeingHit: false,
+                isBeingGrabbed: false,
+                isBeingDragged: false,
                 byController: null,
                 beamMatrix: null,
             }; 
 
-            iObj.lastNState.push({
-                time: -1,
-                post: iObj.pos,
-                hitGrabDragState: iObj.hitGrabDragState,
-            });
+            iObj.enqueueState = (state) => {
+                iObj.lastNStates.push(state);
+                while(iObj.lastNStates.length>numNStates) {
+                    iObj.lastNStates.shift();
+                }
+            };
+
+            iObj.enqueueCurrentState = () => {
+                iObj.enqueueState({
+                    timestamp: iObj.timestamp,
+                    post: iObj.pos,
+                    controllerInteractions: iObj.controllerInteractions,
+                });
+            };
 
             iObj.projectOntoBeam = (bm) => {
                 const o = bm.slice(12, 15);		// get origin of beam
@@ -63,6 +74,12 @@ export class InteractiveSystem {
                 return cg.add(o, q);		// shift back to global space
             };
 
+            // iObj.enqueueState({
+            //     timestamp: iObj.timestamp,
+            //     post: iObj.pos,
+            //     controllerInteractions: iObj.controllerInteractions,
+            // });
+
             iObj.detectHit = iObj.detectHit?iObj.detectHit:default_hit_detector.bind(iObj);
             iObj.detectGrab = iObj.detectGrab?iObj.detectHit:default_grab_handler.bind(iObj);
             iObj.detectDrag = iObj.detectDrag?iObj.detectDrag:default_grab_handler.bind(iObj);
@@ -70,53 +87,108 @@ export class InteractiveSystem {
         });
     }
 
-    updateControllerState() {
-        for (const key of Object.keys(Controller)) {
-            this.controllerStates[key].beamMatrix = this.controllerBeams[key].beamMatrix();
-            for(iObj of interactableObjs) {
-                iObj.detectHit();
-            }
+    updateTimestamps() {
+        const time = this.model.time;
+        for(const iObj of this.interactableObjs) {
+            iObj.timestamp = time;
         }
+    }
 
-        let isPressed   = this.buttonState.right[0].pressed;
-    
-        if(isPressed) {
-    
+    updateControllerStates() {
+        for (const key of Object.keys(Controller)) {
+            const bm = this.controllerBeams[key].beamMatrix();
+            const cs = this.controllerStates[key];
+            cs.bm = bm;
+
+            let shortestProjectionDistance = null;
+            let iObj = null;
+
+            for(const iObjCandidate of this.interactableObjs) {
+                const hitState = iObjCandidate.detectHit(cs);
+                if(hitState.isBeingHit && hitState.projectionDistance < shortestProjectionDistance) {
+                    shortestProjectionDistance = hitState.projectionDistance;
+                    iObj = iObjCandidate;
+                }
+            }
+
+            const prevIObj = cs.interactingWithIObj;
+            if(prevIObj != iObj) {
+                if(prevIObj.controllerInteractions.isBeingDragged) {
+                    prevIObj.onUnDrag();
+                    prevIObj.controllerInteractions.isBeingDragged = false;
+                }
+                if(prevIObj.controllerInteractions.isBeingGrabbed) {
+                    prevIObj.onUnGrab();
+                    prevIObj.controllerInteractions.isBeingGrabbed = false;
+                }
+                if(prevIObj.controllerInteractions.isBeingHit) {
+                    prevIObj.onUnHit();
+                    prevIObj.controllerInteractions.isBeingHit = false;
+                }
+                prevIObj.controllerInteractions.byController = null;
+                prevIObj.controllerInteractions.beamMatrix = null;
+                cs.interactingWithIObj = iObj;
+            }
+
+            if(!iObj.controllerInteractions.isBeingHit)
+                iObj.onHit();
+            iObj.controllerInteractions.isBeingHit = true;
+            if (iObj.detectGrab(cs)) {
+                if(!iObj.controllerInteractions.isBeingGrabbed)
+                    iObj.onGrab();
+                iObj.controllerInteractions.isBeingGrabbed = true;
+                if (iObj.detectDrag(cs)) {
+                    if(!iObj.controllerInteractions.isBeingDragged)
+                        iObj.onDrag();
+                    iObj.controllerInteractions.isBeingDragged = true;
+                }
+            }
         }
      }
 
     invokeObjsPositionUpdate() {
-        for(obj of interactableObjs) {
-            obj.updatePos();
-            
+        for(const iObj of this.interactableObjs) {
+            iObj.updatePos();
         }
     }
 
     invokeObjsAngularUpdate() {
     }
 
+    enqueueStates() {
+        for(const iObj of this.interactableObjs) {
+            iObj.enqueueCurrentState();
+        }
+    }
+
     update() {
-        updateControllerState();
-        invokeObjsPositionUpdate();
+        this.updateTimestamps();
+        this.updateControllerStates();
+        this.invokeObjsPositionUpdate();
+        this.enqueueStates();
     }
 }
 
-export const default_hit_detector = function (bm) {
-    let pointOnBeam = this.projectOntoBeam(bm);
-    let isHit       = cg.distance(pointOnBeam, this.pos) < this.detectionRadius;
-    return [isHit, ];
+export const default_hit_detector = function (cs) {
+    const bm = cs.beamMatrix;
+    const o = bm.slice(12, 15);
+    const pointOnBeam = this.projectOntoBeam(bm);
+    const isBeingHit = cg.distance(pointOnBeam, this.pos) < this.detectionRadius;
+    let projectionDistance = cg.distance(pointOnBeam, 0);
+    return {
+        isBeingHit: isBeingHit,
+        projectionDistance: projectionDistance,
+    };
  };
 
- export const default_grab_handler = function (bm) {
-    let pointOnBeam = cb.projectOntoBeam(this.pos);
-    let isHit       = cg.distance(pointOnBeam, this.pos) < this.detectionRadius;
-    return [isHit, ];
+ export const default_grab_handler = function (controller, bm) {
+    const isPressed = cs.buttonState.pressed;
+    return isPressed;
  };
 
- export const default_drag_handler = function (bm) {
-    let pointOnBeam = cb.projectOntoBeam(this.pos);
-    let isHit       = cg.distance(pointOnBeam, this.pos) < this.detectionRadius;
-    return [isHit, ];
+ export const default_drag_handler = function (controller, bm) {
+    
+    return false;
  };
 
  export const default_position_updater = function () {
