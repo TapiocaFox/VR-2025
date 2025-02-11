@@ -131,12 +131,12 @@ export class InteractiveSystem {
             let iObj = null;
 
             for(const iObjCandidate of this.interactableObjs) {
-                const hitState = iObjCandidate.detectHit(cs);
                 if(iObjCandidate==prevIObj&&prevIObj.controllerInteractions.isBeingGrabbed) {
                     iObj = iObjCandidate;
                     break;
                 }
-                else if(hitState.isBeingHit && (shortestProjectionDistance == null || hitState.projectionDistance < shortestProjectionDistance)) {
+                const hitState = iObjCandidate.detectHit(cs);
+                if(hitState.isBeingHit && (shortestProjectionDistance == null || hitState.projectionDistance < shortestProjectionDistance)) {
                     shortestProjectionDistance = hitState.projectionDistance;
                     iObj = iObjCandidate;
                 }
@@ -290,8 +290,8 @@ export const default_hit_detector = function (cs) {
         const P = this.beamMatrixPositionPairsOnEvent.onDrag[1];
         let bm = beamMatrixBegin;	// get controller beam matrix
         let o = bm.slice(12, 15);		// get origin of beam
-        let x = bm.slice( 2, 5);		// get x axis of beam
-        let y = bm.slice( 5, 8);		// get y axis of beam
+        let x = bm.slice( 0, 3);		// get x axis of beam
+        let y = bm.slice( 4, 7);		// get y axis of beam
         let z = bm.slice( 8, 11);		// get z axis of beam
         let p = cg.subtract(P, o);	// shift point to be relative to beam origin
         let dx = cg.dot(p, x);		// compute distance of point projected onto x
@@ -300,16 +300,17 @@ export const default_hit_detector = function (cs) {
         const beamMatrixNow = this.controllerInteractions.beamMatrix;
         let bm_n = beamMatrixNow;
         let o_n = bm_n.slice(12, 15);		// get origin of beam
-        let x_n = bm_n.slice( 2, 5);		// get x axis of beam
-        let y_n = bm_n.slice( 5, 8);		// get y axis of beam
+        let x_n = bm_n.slice( 0, 3);		// get x axis of beam
+        let y_n = bm_n.slice( 4, 7);		// get y axis of beam
         let z_n = bm_n.slice( 8, 11);		// get z axis of beam
         let x_s = cg.scale(x_n, dx);
         let y_s = cg.scale(y_n, dy);
         let z_s = cg.scale(z_n, dz);
         console.log(cg.norm(bm.slice( 8, 11)), cg.norm(bm_n.slice( 8, 11)));
         console.log(dx, dy, dz);
-        // const newPos = cg.add(cg.add(cg.add(o_n, x_s), y_s), z_s);
-        const newPos = cg.add(o_n, z_s);
+        const newPos = cg.add(cg.add(cg.add(o_n, x_s), y_s), z_s);
+        // const newPos = cg.add(cg.add(o_n, x_s), z_s);
+        // const newPos = cg.add(o_n, z_s);
         this.pos = newPos;
     }
     return;
