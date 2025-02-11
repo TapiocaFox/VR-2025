@@ -320,6 +320,21 @@ export let isLineIntersectPoly = (A, B, P) => {
    return t0 > t1 || t1 < 0 || t0 > distance(A, B) ? null : [t0, t1];
 }
 
+export let isSphereIntersectBox = (S,B) => {
+   let C = [ S[0] - B[12], S[1] - B[13], S[2] - B[14] ], r = S[3];
+   let X = B.slice(0, 3), sx = norm(X), x = Math.abs(dot(C, X) / sx) - sx,
+       Y = B.slice(4, 7), sy = norm(Y), y = Math.abs(dot(C, Y) / sy) - sy,
+       Z = B.slice(8,11), sz = norm(Z), z = Math.abs(dot(C, Z) / sz) - sz;
+   return ( x < 0 && y < 0 && z < 0 ? 0 :
+            y < 0 && z < 0 ? x * x :
+            z < 0 && x < 0 ? y * y :
+            x < 0 && y < 0 ? z * z :
+            x < 0 ? y * y + z * z :
+            y < 0 ? z * z + x * x :
+            z < 0 ? x * x + y * y :
+            x * x + y * y + z * z ) <= r * r;
+}
+
 export let isBoxIntersectBox = (A,B) => {
    let P = [[1,0,0,1],[-1,0,0,1],[0,1,0,1],[0,-1,0,1],[0,0,1,1],[0,0,-1,1]];
    let isIntersect = (A,B) => {
@@ -411,7 +426,8 @@ export let mHitRect = (beamMatrix, objMatrix) => {
    for (let i = 1 ; i < L.length ; i++)
       if (F(i) < 0)			// if outside of any bounding plane
          return null;			//    then give up.
-   return [F(1)/2, F(3)/2, -z];		// return [0...1, 0...1, z-dist]
+// return [F(1)/2, F(3)/2, -z];		// return [0...1, 0...1, z-dist]
+   return [F(1)-1, F(3)-1, -z];		// return [0...1, 0...1, z-dist]
 }
 
 export let mIdentity = () => [1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1];
@@ -546,8 +562,17 @@ export let Matrix = function() {
    this.restore   = ()      => --top;
 }
 
+let decimalFactor = 10000; // number of digits after the decimal for floats
 
+export let packMatrix = m => { // PACK A ROTATION+TRANSLATION MATRIX (SCALING IS NOT SUPPORTED)
+   let I = t => decimalFactor * t >> 0, Q = mToQuaternion(m);
+   return [ I(Q.x), I(Q.y), I(Q.z), I(Q.w), I(m[12]), I(m[13]), I(m[14]) ];
+}
 
+export let unpackMatrix = P => { // UNPACK A ROTATION+TRANSLATION MATRIX
+   let m = mFromQuaternion({x:P[0]/decimalFactor, y:P[1]/decimalFactor, z:P[2]/decimalFactor, w:P[3]/decimalFactor});
+   return m.slice(0, 12).concat([P[4]/decimalFactor, P[5]/decimalFactor, P[6]/decimalFactor, 1]);
+}
 
 export let vec2vecProj = (a,b) => {
    let proj = dot(a,b)/dot(b,b);

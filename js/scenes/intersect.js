@@ -1,6 +1,6 @@
 import * as cg from "../render/core/cg.js";
 
-// This show how you can detect an intersection of two boxes.
+// This shows how you can detect an intersection of two boxes.
 
 export const init = async model => {
    let box1 = model.add('cube');
