@@ -5,14 +5,15 @@ import { rcb, lcb } from '../handle_scenes.js';
 import {G2} from "../util/g2.js";
 import * as interactive from "./lib/interactive.js";
 
-const ballRadius = 0.3;
-
 export const init = async model => {
    
    let g2 = new G2(false, 512);
+   g2.setColor('red');
+
    model.txtrSrc(2, g2.getCanvas());
    // let debug_panel = model.add('square').move(-0.5,1.75,-1).turnZ(Math.PI/2).scale(.4);
    let debug_panel = model.add('square').move(-0.5,1.75,-1).scale(.2);
+   debug_panel.txtr(2);
 
    model.txtrSrc(1, '../media/textures/ennichi-flipped-y.jpg');
    clay.defineMesh('terrain', clay.createGrid(32, 32));
@@ -23,44 +24,52 @@ export const init = async model => {
    let wall_to = [8, 10, 8];
 
    let obj = model.add('obj');
-   let ball = model.add('sphere').scale(ballRadius);
-   // let terrain = model.add('terrain').move(0,2,-3.5).scale(4.5, 3., 1.5).txtr(1);
-   
-   const interactableObjs = [
-      {
-         name: 'ball',
-         obj: ball,
-         pos: [0, 1, -2],
-         detectionRadius: ballRadius,
-         onIdle: function () {},
-         onMoving: function () {},
 
-         onHit: function () { this.obj.color([1,.5,.5]); },
-         onGrab: function () { this.obj.color([1,0,0]);},
-         onDrag: function () { this.obj.color([0,1,0]); },
-         onUnDrag: function () { this.obj.color([1,0,0]); },
-         onUnGrab: function () { this.obj.color([1,.5,.5]); },
-         onUnHit: function () { this.obj.color('white'); },
-      }
+   // let terrain = model.add('terrain').move(0,2,-3.5).scale(4.5, 3., 1.5).txtr(1);
+   const buildIBall = (name, radius, pos) => {
+      return {
+         name: name,
+         obj: model.add('sphere'),
+         pos: pos,
+         detectionRadius: radius,
+         animate: function () {
+            this.obj.identity().move(this.pos).scale(this.detectionRadius);
+         },
+
+         onHit: function (cs) { console.log(`onHit by controller: ${cs.controller.toString()}`); this.obj.color([1,.5,.5]); },
+         onGrab: function (cs) { console.log('onGrab'); this.obj.color([1,0,0]);},
+         onDrag: function (cs) { console.log('onDrag'); this.obj.color([0,1,0]); },
+         onUnDrag: function (cs) { console.log('onUnDrag'); this.obj.color([1,0,0]); },
+         onUnGrab: function (cs) { console.log('onUnGrab'); this.obj.color([1,.5,.5]); },
+         onUnHit: function (cs) { console.log('onUnHit'); this.obj.color('white'); },
+
+         // onIdle: function () {},
+         // onMoving: function () {},
+      };
+   }
+   const interactableObjs = [
+      buildIBall('Small Ball', 0.2, [1, 1, -2]),
+      buildIBall('Mid Ball', 0.3, [0, 1, -2]),
+      buildIBall('Large Ball', 0.4, [-1, 1, -2]),
    ];
    
-   const iSys = new interactive.InteractiveSystem(model, interactableObjs, buttonState, joyStickState, lcb, rcb);
+   const iSubSys = new interactive.InteractiveSystem(model, interactableObjs, buttonState, joyStickState, lcb, rcb);
 
    model.animate(() => {
       obj.identity().move(0,0.5,-1).turnX(.01 * Math.PI).scale(.1);
       
-      // const debug_text = `pointOnBeam: \n  ${pointOnBeam.map(it=>it.toFixed(1))}\nisHit: ${isHit}\nisPressed: ${isPressed}`;
-      const debug_text = `None`;
+      const rightControllerIObj = iSubSys.controllerStates[interactive.Controller.Right].interactingWithIObj;
+      const debug_text = `pointingAt: \n> ${rightControllerIObj?rightControllerIObj.name:'None'}`;
+      
       // console.log(debug_text);
       g2.clear();
       g2.text(debug_text, 0.0, 0.0);
-      g2.setColor('red');
-      // g2.update();
-      debug_panel.txtr(2);
+      g2.update();
+      // debug_panel.txtr(2);
 
       // ball.identity().move(ballPosition).scale(ballRadius);
 
-      iSys.update();
+      iSubSys.update();
       
       const bm = rcb.beamMatrix();
       let o = bm.slice(12, 15);
