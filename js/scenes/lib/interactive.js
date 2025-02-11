@@ -135,6 +135,9 @@ export class InteractiveSystem {
                     iObj = iObjCandidate;
                     break;
                 }
+                else if (iObjCandidate.controllerInteractions.isBeingGrabbed) {
+                    continue; // Being grabbed by other controller.
+                }
                 const hitState = iObjCandidate.detectHit(cs);
                 if(hitState.isBeingHit && (shortestProjectionDistance == null || hitState.projectionDistance < shortestProjectionDistance)) {
                     shortestProjectionDistance = hitState.projectionDistance;
@@ -306,8 +309,6 @@ export const default_hit_detector = function (cs) {
         let x_s = cg.scale(x_n, dx);
         let y_s = cg.scale(y_n, dy);
         let z_s = cg.scale(z_n, dz);
-        console.log(cg.norm(bm.slice( 8, 11)), cg.norm(bm_n.slice( 8, 11)));
-        console.log(dx, dy, dz);
         const newPos = cg.add(cg.add(cg.add(o_n, x_s), y_s), z_s);
         // const newPos = cg.add(cg.add(o_n, x_s), z_s);
         // const newPos = cg.add(o_n, z_s);
