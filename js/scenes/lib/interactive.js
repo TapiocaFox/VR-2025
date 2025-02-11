@@ -4,7 +4,7 @@ import * as cg from "../../render/core/cg.js";
 // 1. Interact with multiple controllers.
 // 2. Interact with multiple objs.
 // 3. Hit, Grab, Drag interactions dectection.
-// 4. Response and update position based on interations.
+// 4. Response and update position based on interations, and physics.
 // 5. Modular, each obj can have there way of handling things.
 
 const numNStates = 16;
@@ -100,8 +100,8 @@ export class InteractiveSystem {
             // "Polyfill"
             iObj.name = iObj.name?iObj.name:'Unnamed';
             iObj.detectHit = iObj.detectHit?iObj.detectHit:default_hit_detector.bind(iObj);
-            iObj.detectGrab = iObj.detectGrab?iObj.detectHit:default_grab_handler.bind(iObj);
-            iObj.detectDrag = iObj.detectDrag?iObj.detectDrag:default_drag_handler.bind(iObj);
+            iObj.detectGrab = iObj.detectGrab?iObj.detectHit:default_grab_detector.bind(iObj);
+            iObj.detectDrag = iObj.detectDrag?iObj.detectDrag:default_drag_detector.bind(iObj);
             iObj.updatePos = iObj.updatePos?iObj.updatePos:default_position_updater.bind(iObj);
             
             iObj.onHit = iObj.onHit?iObj.onHit:() => {};
@@ -264,13 +264,13 @@ export const default_hit_detector = function (cs) {
     };
  };
 
- export const default_grab_handler = function (cs) {
+ export const default_grab_detector = function (cs) {
     const isPressed = cs.buttonState[0].pressed;
     return isPressed;
  };
 
- const drag_distance_threshold = 0.01;
- export const default_drag_handler = function (cs) {
+ const drag_distance_threshold = 0.05;
+ export const default_drag_detector = function (cs) {
     const bm = cs.beamMatrix;
     const lastState = this.getLastState();
     if(lastState&&this.controllerInteractions.isBeingGrabbed&&lastState.controllerInteractions.isBeingDragged) return true;
