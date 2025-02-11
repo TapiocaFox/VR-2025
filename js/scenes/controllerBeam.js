@@ -20,8 +20,11 @@ export const init = async model => {
       let isHit       = cg.distance(pointOnBeam, ballPosition) < ballRadius;
       let isPressed   = buttonState.left[0].pressed;
 
+      // const debug_text = `pointOnBean: \n${pointOnBeam}\nisHit: ${isHit}\nisPressed: ${isPressed}`;
+      // console.log(debug_text);
+
       if (isHit & isPressed)
-	 ballPosition = pointOnBeam;
+	      ballPosition = pointOnBeam;
 
       ball.color(isHit ? isPressed ? [1,0,0] : [1,.5,.5] : [1,1,1]);
       ball.identity().move(ballPosition).scale(ballRadius);
