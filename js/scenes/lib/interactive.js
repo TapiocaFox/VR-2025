@@ -1,10 +1,11 @@
 import * as cg from "../../render/core/cg.js";
 
 // Goal
-// 1. Interact with multiple objs.
-// 2. Hit, Grab, Drag interactions dectection.
-// 3. Response and update position based on interations.
-// 4. Modular, each obj can have there way of handling things.
+// 1. Interact with multiple controllers.
+// 2. Interact with multiple objs.
+// 3. Hit, Grab, Drag interactions dectection.
+// 4. Response and update position based on interations.
+// 5. Modular, each obj can have there way of handling things.
 
 const numNStates = 16;
 
@@ -126,17 +127,22 @@ export class InteractiveSystem {
             cs.beamMatrix = bm;
 
             let shortestProjectionDistance = null;
+            const prevIObj = cs.interactingWithIObj;
             let iObj = null;
 
             for(const iObjCandidate of this.interactableObjs) {
                 const hitState = iObjCandidate.detectHit(cs);
-                if(hitState.isBeingHit && (shortestProjectionDistance == null || hitState.projectionDistance < shortestProjectionDistance)) {
+                if(iObjCandidate==prevIObj&&prevIObj.controllerInteractions.isBeingGrabbed) {
+                    iObj = iObjCandidate;
+                    break;
+                }
+                else if(hitState.isBeingHit && (shortestProjectionDistance == null || hitState.projectionDistance < shortestProjectionDistance)) {
                     shortestProjectionDistance = hitState.projectionDistance;
                     iObj = iObjCandidate;
                 }
             }
 
-            const prevIObj = cs.interactingWithIObj;
+            // Unregister the old one.
             if(prevIObj && prevIObj != iObj) {
                 if(prevIObj.controllerInteractions.isBeingDragged) {
                     prevIObj.controllerInteractions.isBeingDragged = false;
@@ -160,7 +166,8 @@ export class InteractiveSystem {
             cs.interactingWithIObj = iObj;
 
             if(!iObj) continue;
-            
+
+            // Register the new one.
             iObj.controllerInteractions.beamMatrix = bm;
             
             if(!iObj.controllerInteractions.isBeingHit) {
@@ -191,6 +198,11 @@ export class InteractiveSystem {
                 }
             }
             else {
+                if(iObj.controllerInteractions.isBeingDragged) {
+                    iObj.controllerInteractions.isBeingDragged = false;
+                    iObj.beamMatrixPositionPairsOnEvent.onUnDrag = [bm, iObj.pos];
+                    iObj.onUnDrag(cs);
+                }
                 if(iObj.controllerInteractions.isBeingGrabbed) {
                     iObj.controllerInteractions.isBeingGrabbed = false;
                     iObj.beamMatrixPositionPairsOnEvent.onUnGrab = [bm, iObj.pos];
@@ -241,7 +253,7 @@ export const default_hit_detector = function (cs) {
     const o = bm.slice(12, 15);
     const pointOnBeam = this.projectOntoBeam(bm);
     const isBeingHit = cg.distance(pointOnBeam, this.pos) < this.detectionRadius;
-    const projectionDistance = cg.distance(pointOnBeam, 0);
+    const projectionDistance = cg.norm(pointOnBeam);
 
     return {
         isBeingHit: isBeingHit,
@@ -261,10 +273,10 @@ export const default_hit_detector = function (cs) {
     if(lastState&&this.controllerInteractions.isBeingGrabbed&&lastState.controllerInteractions.isBeingDragged) return true;
 
     // Affine transformation.
-    const pointOnBeamBegin = this.projectOntoBeam(this.beamMatrixPositionPairsOnEvent.onHit[0]);
+    const pointOnBeamBegin = this.projectOntoBeam(this.beamMatrixPositionPairsOnEvent.onGrab[0]);
     const pointOnBeamNow = this.projectOntoBeam(bm);
     const distance = cg.distance(pointOnBeamBegin, pointOnBeamNow);
-    console.log(distance);
+    // console.log(distance);
     if(distance> drag_distance_threshold) return true;
     // Ignore angular transformation now.
 
@@ -274,8 +286,8 @@ export const default_hit_detector = function (cs) {
  export const default_position_updater = function () {
     // Update position if being dragged.
     if(this.controllerInteractions.isBeingDragged) {
-        const beamMatrixBegin = this.beamMatrixPositionPairsOnEvent.onHit[0];
-        const P = this.beamMatrixPositionPairsOnEvent.onHit[1];
+        const beamMatrixBegin = this.beamMatrixPositionPairsOnEvent.onDrag[0];
+        const P = this.beamMatrixPositionPairsOnEvent.onDrag[1];
         let bm = beamMatrixBegin;	// get controller beam matrix
         let o = bm.slice(12, 15);		// get origin of beam
         let x = bm.slice( 2, 5);		// get x axis of beam
@@ -295,7 +307,9 @@ export const default_hit_detector = function (cs) {
         let y_s = cg.scale(y_n, dy);
         let z_s = cg.scale(z_n, dz);
         console.log(cg.norm(bm.slice( 8, 11)), cg.norm(bm_n.slice( 8, 11)));
-        const newPos = cg.add(cg.add(cg.add(o_n, x_s), y_s), z_s);
+        console.log(dx, dy, dz);
+        // const newPos = cg.add(cg.add(cg.add(o_n, x_s), y_s), z_s);
+        const newPos = cg.add(o_n, z_s);
         this.pos = newPos;
     }
     return;
