@@ -127,7 +127,7 @@ export const init = async model => {
       for (let n = 0 ; n < 4 ; n++)
          values.push(.5 + .4 * Math.sin(n + 3 * model.time));
       this.barChart(-.25,-.25,.5,.5, values, ['frodo','merry','pippin','samwise'],
-                                           ['red','green','blue','magenta']);
+                                             ['red','green','blue','magenta']);
    }
 
    // CLOCK

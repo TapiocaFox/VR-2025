@@ -1,7 +1,14 @@
 import * as cg from "./cg.js";
-import { g2 } from "../../util/g2.js";
+import { G2 } from "../../util/g2.js";
 
-export function CodeEditor(obj) {
+export function CodeEditor(obj, txtrUnit) {
+
+   if (txtrUnit === undefined)
+      txtrUnit = 14;
+
+   let g2 = new G2();
+   obj.txtrSrc(txtrUnit, g2.getCanvas());
+
    window.codeState = { key: '', col: 0, row: 0, text: '' };
 
    let isSetCode = false, error = '', isBlack = false, isHelp = false;
@@ -23,14 +30,16 @@ export function CodeEditor(obj) {
 
    // EDITABLE CODE
 
-   let screen = obj.add('cube').texture(() => {
-      g2.setColor('#00000080');
-      g2.fillRect(0,0,1,1);
-      g2.textHeight(.02);
+   let screen = obj.add('square').txtr(txtrUnit);
+
+   g2.render = function() {
+      this.setColor('#00000080');
+      this.fillRect(0,0,1,1);
+      this.textHeight(.02);
       if (isHelp) {
-         g2.setColor('#4080ff');
-         g2.setFont('helvetica');
-         g2.fillText(`\
+         this.setColor('#4080ff');
+         this.setFont('helvetica');
+         this.text(`\
  CMD-a:  reparse code
  CMD-b:  black/white text
  CMD-i:   toggle this help message
@@ -40,30 +49,30 @@ export function CodeEditor(obj) {
       }
       else {
          if (error.length > 0) {
-            g2.setColor('#ff8080');
-            g2.setFont('helvetica');
-            //g2.fillText('ERROR: ' + error, .004, .984, 'left');
+            this.setColor('#ff8080');
+            this.setFont('helvetica');
          }
          else {
-            g2.setColor('#4080ff');
-            g2.setFont('helvetica');
-            g2.fillText('For help type CMD-i', .004, .984, 'left');
+            this.setColor('#4080ff');
+            this.setFont('helvetica');
+            this.text('For help type CMD-i', .004, .984, 'left');
          }
-         g2.setColor(isBlack ? 'black' : 'white');
-         g2.fillRect(0,.97,1,.001);
-         g2.setFont('courier');
-         g2.fillText('\n' + codeState.text, .0113, .98, 'left');
+         this.setColor(isBlack ? 'black' : 'white');
+         this.fillRect(0,.97,1,.001);
+         this.setFont('courier');
+         this.text('\n' + codeState.text, .0113, .98, 'left');
 
-         g2.setColor('#4080ff80');
+         this.setColor('#4080ff80');
          let c = codeState.col;
          let r = codeState.row;
-	 g2.fillRect(.5+.5*(-.966+.0242*c-.011),.5+.5*(.957-.04*r-.06),.0121,.02);
+	 this.fillRect(.5+.5*(-.966+.0242*c-.011),.5+.5*(.957-.04*r-.06),.0121,.02);
       }
-   });
+   }
 
    let wasInteractMode = false;
 
    this.update = () => {
+      g2.update();
       window.codeState = server.synchronize('codeState');
 
       if (isSetCode) {
