@@ -62,6 +62,80 @@ export class InteractiveSystem {
                 onUnHit: null,
             }; 
 
+            iObj.remove = () => {
+                const index = this.interactableObjs.indexOf(iObj);
+                // this.model
+            };
+
+            iObj.calcKineticPos = (bbox, g) => {
+                // Apply new dxyz if isBeingGrabbed
+                const lastNStates = iObj.lastNStates;
+                if (iObj.controllerInteractions.isBeingGrabbed) {
+                    if (lastNStates.length - 1) {
+                        return iObj.pos; // Not enough data to compute delta.
+                    }
+                    return iObj.pos;
+                    // weightedVelocity = cg.add(weightedVelocity, [0, g * (lastNStates[lastNStates.length - 1].timestamp - lastNStates[lastNStates.length - numStatesUsed].timestamp), 0]);
+                }
+                else {
+                    iObj.dxyz = cg.add(iObj.dxyz, g);
+                    const newPos = cg.add(iObj.pos, iObj.dxyz);
+                    const lastState = lastNStates[lastNStates.length-1];
+                    const prevPos = lastState?lastState.pos:null;
+                    const prevDxyz = lastState?lastState.dxyz:null;
+                    // console.log(lastState);
+                    
+                    if (newPos[0] < bbox[0] && iObj.dxyz[0]<0) {
+                        iObj.dxyz[0] = -iObj.dxyz[0];
+                        if(prevPos&&prevPos[0] <= bbox[0]) {
+                            newPos[0] = bbox[0];
+                            iObj.dxyz[0] = 0;
+                        }
+                    }
+                    else if (newPos[0] > bbox[1] && iObj.dxyz[0]>0) {
+                        iObj.dxyz[0] = -iObj.dxyz[0];
+                        if(prevPos&&prevPos[0] >= bbox[1]) {
+                            newPos[0] = bbox[1];
+                            iObj.dxyz[0] = 0;
+                        }
+                    }
+
+                    if (newPos[1] < bbox[2] && iObj.dxyz[1]<0) {
+                        iObj.dxyz[1] = -iObj.dxyz[1];
+                        // console.log("flag1");
+                        if(prevPos&&prevPos[1] <= bbox[2]) {
+                            newPos[1] = bbox[2];
+                            iObj.dxyz[1] = 0;
+                            // console.log("flag2");
+                        }
+                    }
+                    else if (newPos[1] > bbox[3] && iObj.dxyz[1]>0) {
+                        iObj.dxyz[1] = -iObj.dxyz[1];
+                        if(prevPos&&prevPos[1] >= bbox[3]) {
+                            newPos[1] = bbox[3];
+                            iObj.dxyz[1] = 0;
+                        }
+                    }
+
+                    if (newPos[2] < bbox[4] && iObj.dxyz[2]<0) {
+                        iObj.dxyz[2] = -iObj.dxyz[2];
+                        if(prevPos&&prevPos[2] <= bbox[4]) {
+                            newPos[2] = bbox[4];
+                            iObj.dxyz[2] = 0;
+                        }
+                    }
+                    else if (newPos[2] > bbox[5] && iObj.dxyz[2]>0) {
+                        iObj.dxyz[2] = -iObj.dxyz[2];
+                        if(prevPos&&prevPos[2] >= bbox[5]) {
+                            newPos[2] = bbox[5];
+                            iObj.dxyz[2] = 0;
+                        }
+                    }
+
+                    return newPos;
+                }
+            };
+
             iObj.getLastState = () => {
                 return iObj.lastNStates[iObj.lastNStates.length-1];
             };
@@ -76,7 +150,8 @@ export class InteractiveSystem {
             iObj.enqueueCurrentState = () => {
                 iObj.enqueueState({
                     timestamp: iObj.timestamp,
-                    post: iObj.pos,
+                    pos: iObj.pos,
+                    dxyz: iObj.dxyz,
                     controllerInteractions: iObj.controllerInteractions,
                 });
             };
@@ -99,6 +174,8 @@ export class InteractiveSystem {
 
             // "Polyfill"
             iObj.name = iObj.name?iObj.name:'Unnamed';
+            iObj.pos = iObj.pos?iObj.pos:[0, 0, 0];
+            iObj.dxyz = iObj.dxyz?iObj.dxyz:[0, 0, 0];
             iObj.detectHit = iObj.detectHit?iObj.detectHit:default_hit_detector.bind(iObj);
             iObj.detectGrab = iObj.detectGrab?iObj.detectHit:default_grab_detector.bind(iObj);
             iObj.detectDrag = iObj.detectDrag?iObj.detectDrag:default_drag_detector.bind(iObj);
@@ -300,6 +377,7 @@ export const default_hit_detector = function (cs) {
         let dx = cg.dot(p, x);		// compute distance of point projected onto x
         let dy = cg.dot(p, y);		// compute distance of point projected onto y
         let dz = cg.dot(p, z);		// compute distance of point projected onto beam
+        
         const beamMatrixNow = this.controllerInteractions.beamMatrix;
         let bm_n = beamMatrixNow;
         let o_n = bm_n.slice(12, 15);		// get origin of beam
@@ -316,3 +394,15 @@ export const default_hit_detector = function (cs) {
     }
     return;
  };
+
+ export const build_gravity_position_updater = function (bbox=[-5, 5, 0, 10, -5, 5], g=[0, -0.003, 0]) {
+    // Update position if being dragged.
+    const gravity_position_updater = function () {
+        // console.log(this.pos);
+        this.pos = this.calcKineticPos(bbox, g);
+        // console.log(this.pos);
+        return;
+     };
+     return gravity_position_updater;
+ };
+

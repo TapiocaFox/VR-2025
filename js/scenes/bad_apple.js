@@ -53,17 +53,21 @@ export const init = async model => {
    const table = model.add('table');
 
    // let terrain = model.add('terrain').move(0,2,-3.5).scale(4.5, 3., 1.5).txtr(1);
-   const buildIBall = (name, radius, pos, rot, isBad) => {
+   const buildIBall = (name, radius, pos, dxyz, rot, isBad) => {
       return {
          name: name,
          obj: model.add('apple'),
          pos: pos,
+         // dxyz: [0, 0.1, 0],
+         dxyz: dxyz,
          detectionRadius: radius,
          isBad: isBad,
          wasOnTable: false,
          animate: function () {
             this.obj.identity().move(this.pos).turnY(rot).scale(0.75);
          },
+
+         updatePos: interactive.build_gravity_position_updater([-2, 2, 0, 5, -2, 2]),
 
          onHit: function (cs) { console.log(`onHit by controller: ${cs.controller.toString()}`); this.obj.color([1,.5,.5]); },
          onGrab: function (cs) { console.log('onGrab'); this.obj.color(isBad?[0,0,1]:[1,0,0]);},
@@ -82,12 +86,17 @@ export const init = async model => {
          // onMoving: function () {},
       };
    }
+
+   const randomVector = (v) => {
+      return [randomFromInterval(-v, v), randomFromInterval(-v, v), randomFromInterval(-v, v)];
+   };
    const interactableObjs = [
    ];
 
-   for(let i=0; i<64; i++) {
+   for(let i=0; i<16; i++) {
       const isBad = Math.random() < badAppleRatio;
-      interactableObjs.push(buildIBall(`${isBad?'Bad':'Good'}`, 0.085, [randomFromInterval(-2, 2), 0, randomFromInterval(-2, 2)], randomFromInterval(0, Math.PI), isBad));
+      interactableObjs.push(buildIBall(`${isBad?'Bad':'Good'}`, 0.085, [randomFromInterval(-2, 2), 0, randomFromInterval(-2, 2)], 
+      randomVector(0.05), randomFromInterval(0, Math.PI), isBad));
    }
 
    const iSubSys = new interactive.InteractiveSystem(model, interactableObjs, buttonState, joyStickState, lcb, rcb);
