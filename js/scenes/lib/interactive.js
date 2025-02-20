@@ -7,7 +7,7 @@ import * as cg from "../../render/core/cg.js";
 // 4. Response and update position based on interations, and physics.
 // 5. Modular, each obj can have there way of handling things.
 
-const numNStates = 16;
+const numNStates = 8;
 
 export const Controller = Object.freeze({
     Left:   Symbol("Left"),
@@ -65,75 +65,6 @@ export class InteractiveSystem {
             iObj.remove = () => {
                 const index = this.interactableObjs.indexOf(iObj);
                 // this.model
-            };
-
-            iObj.calcKineticPos = (bbox, g) => {
-                // Apply new dxyz if isBeingGrabbed
-                const lastNStates = iObj.lastNStates;
-                if (iObj.controllerInteractions.isBeingGrabbed) {
-                    if (lastNStates.length - 1) {
-                        return iObj.pos; // Not enough data to compute delta.
-                    }
-                    return iObj.pos;
-                    // weightedVelocity = cg.add(weightedVelocity, [0, g * (lastNStates[lastNStates.length - 1].timestamp - lastNStates[lastNStates.length - numStatesUsed].timestamp), 0]);
-                }
-                else {
-                    iObj.dxyz = cg.add(iObj.dxyz, g);
-                    const newPos = cg.add(iObj.pos, iObj.dxyz);
-                    const lastState = lastNStates[lastNStates.length-1];
-                    const prevPos = lastState?lastState.pos:null;
-                    const prevDxyz = lastState?lastState.dxyz:null;
-                    // console.log(lastState);
-                    
-                    if (newPos[0] < bbox[0] && iObj.dxyz[0]<0) {
-                        iObj.dxyz[0] = -iObj.dxyz[0];
-                        if(prevPos&&prevPos[0] <= bbox[0]) {
-                            newPos[0] = bbox[0];
-                            iObj.dxyz[0] = 0;
-                        }
-                    }
-                    else if (newPos[0] > bbox[1] && iObj.dxyz[0]>0) {
-                        iObj.dxyz[0] = -iObj.dxyz[0];
-                        if(prevPos&&prevPos[0] >= bbox[1]) {
-                            newPos[0] = bbox[1];
-                            iObj.dxyz[0] = 0;
-                        }
-                    }
-
-                    if (newPos[1] < bbox[2] && iObj.dxyz[1]<0) {
-                        iObj.dxyz[1] = -iObj.dxyz[1];
-                        // console.log("flag1");
-                        if(prevPos&&prevPos[1] <= bbox[2]) {
-                            newPos[1] = bbox[2];
-                            iObj.dxyz[1] = 0;
-                            // console.log("flag2");
-                        }
-                    }
-                    else if (newPos[1] > bbox[3] && iObj.dxyz[1]>0) {
-                        iObj.dxyz[1] = -iObj.dxyz[1];
-                        if(prevPos&&prevPos[1] >= bbox[3]) {
-                            newPos[1] = bbox[3];
-                            iObj.dxyz[1] = 0;
-                        }
-                    }
-
-                    if (newPos[2] < bbox[4] && iObj.dxyz[2]<0) {
-                        iObj.dxyz[2] = -iObj.dxyz[2];
-                        if(prevPos&&prevPos[2] <= bbox[4]) {
-                            newPos[2] = bbox[4];
-                            iObj.dxyz[2] = 0;
-                        }
-                    }
-                    else if (newPos[2] > bbox[5] && iObj.dxyz[2]>0) {
-                        iObj.dxyz[2] = -iObj.dxyz[2];
-                        if(prevPos&&prevPos[2] >= bbox[5]) {
-                            newPos[2] = bbox[5];
-                            iObj.dxyz[2] = 0;
-                        }
-                    }
-
-                    return newPos;
-                }
             };
 
             iObj.getLastState = () => {
@@ -307,12 +238,6 @@ export class InteractiveSystem {
         }
     }
 
-    enqueueStates() {
-        for(const iObj of this.interactableObjs) {
-            iObj.enqueueCurrentState();
-        }
-    }
-
     invokeAnimations() {
         for(const iObj of this.interactableObjs) {
             iObj.animate();
@@ -395,14 +320,115 @@ export const default_hit_detector = function (cs) {
     return;
  };
 
- export const build_gravity_position_updater = function (bbox=[-5, 5, 0, 10, -5, 5], g=[0, -0.003, 0]) {
+ export const build_kinetic_position_updater = function (iObj, bbox=[-5, 5, 0, 10, -5, 5], g=[0, -9.8, 0], nStates = 5) {
+    // console.log(iObj);
     // Update position if being dragged.
-    const gravity_position_updater = function () {
-        // console.log(this.pos);
-        this.pos = this.calcKineticPos(bbox, g);
-        // console.log(this.pos);
-        return;
-     };
-     return gravity_position_updater;
+
+    const default_position_updater_binded = default_position_updater.bind(iObj);
+    const kinetic_position_updater = function () {
+        // console.log(this);
+        // Apply new dxyz if isBeingGrabbed
+        const lastState = this.getLastState();
+        const timestamp = this.timestamp;
+        const last_timestamp = lastState?lastState.timestamp:0;
+        const d_timestamp = timestamp-last_timestamp;
+        const lastNStates = this.lastNStates;
+        
+        // console.log(lastNStates);
+        if (this.controllerInteractions.isBeingGrabbed) {
+            default_position_updater_binded();
+            // console.log(lastNStates.length);
+            // Calc new dxyz based on previous M states.
+            const numStatesUsed = Math.min(nStates, lastNStates.length - 1);
+            // console.log(numStatesUsed);
+            if (numStatesUsed > 0) {
+                let weightedVelocity = [0, 0, 0];
+                let totalWeight = 0;
+    
+                for (let i = 1; i <= numStatesUsed; i++) {
+                    const prevState = lastNStates[lastNStates.length - 1 - i];
+                    const nextState = lastNStates[lastNStates.length - i];
+                    const dt = nextState.timestamp - prevState.timestamp;
+    
+                    if (dt > 0) {
+                        const velocity = cg.scale(cg.subtract(nextState.pos, prevState.pos), 1 / dt);
+                        const weight = 1 / i; // More recent states get higher weight.
+                        weightedVelocity = cg.add(weightedVelocity, cg.scale(velocity, weight));
+                        totalWeight += weight;
+                    }
+                }
+                // console.log(weightedVelocity);
+                const newDxyz = cg.scale(weightedVelocity, 1 / totalWeight);
+                // if(this.dxyz!=newDxyz) console.log(newDxyz);
+
+                if (totalWeight > 0) {
+                    this.dxyz = newDxyz;
+                }
+            }
+    
+            return;
+            // weightedVelocity = cg.add(weightedVelocity, [0, g * (lastNStates[lastNStates.length - 1].timestamp - lastNStates[lastNStates.length - numStatesUsed].timestamp), 0]);
+        }
+        else {
+            this.dxyz = cg.add(this.dxyz, cg.scale(g, d_timestamp));
+            const dxyz_time = cg.scale(this.dxyz, d_timestamp);
+            const newPos = cg.add(this.pos, dxyz_time);
+            const prevPos = lastState?lastState.pos:null;
+            const prevDxyz = lastState?lastState.dxyz:null;
+            // console.log(lastState);
+            
+            if (newPos[0] < bbox[0] && this.dxyz[0]<0) {
+                this.dxyz[0] = -this.dxyz[0];
+                if(prevPos&&prevPos[0] <= bbox[0]) {
+                    newPos[0] = bbox[0];
+                    this.dxyz[0] = 0;
+                }
+            }
+            else if (newPos[0] > bbox[1] && this.dxyz[0]>0) {
+                this.dxyz[0] = -this.dxyz[0];
+                if(prevPos&&prevPos[0] >= bbox[1]) {
+                    newPos[0] = bbox[1];
+                    this.dxyz[0] = 0;
+                }
+            }
+    
+            if (newPos[1] < bbox[2] && this.dxyz[1]<0) {
+                this.dxyz[1] = -this.dxyz[1];
+                // console.log("flag1");
+                if(prevPos&&prevPos[1] <= bbox[2]) {
+                    newPos[1] = bbox[2];
+                    this.dxyz[1] = 0;
+                    // console.log("flag2");
+                }
+            }
+            else if (newPos[1] > bbox[3] && this.dxyz[1]>0) {
+                this.dxyz[1] = -this.dxyz[1];
+                if(prevPos&&prevPos[1] >= bbox[3]) {
+                    newPos[1] = bbox[3];
+                    this.dxyz[1] = 0;
+                }
+            }
+    
+            if (newPos[2] < bbox[4] && this.dxyz[2]<0) {
+                this.dxyz[2] = -this.dxyz[2];
+                if(prevPos&&prevPos[2] <= bbox[4]) {
+                    newPos[2] = bbox[4];
+                    this.dxyz[2] = 0;
+                }
+            }
+            else if (newPos[2] > bbox[5] && this.dxyz[2]>0) {
+                this.dxyz[2] = -this.dxyz[2];
+                if(prevPos&&prevPos[2] >= bbox[5]) {
+                    newPos[2] = bbox[5];
+                    this.dxyz[2] = 0;
+                }
+            }
+    
+            this.pos = newPos;
+            return
+        }
+    };
+    return kinetic_position_updater.bind(iObj);
  };
+
 
