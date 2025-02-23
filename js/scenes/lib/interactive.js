@@ -7,7 +7,7 @@ import * as cg from "../../render/core/cg.js";
 // 4. Response and update position based on interations, and physics.
 // 5. Modular, each obj can have there way of handling things.
 
-const numNStates = 8;
+const numNStates = 16;
 
 export const Controller = Object.freeze({
     Left:   Symbol("Left"),
@@ -320,7 +320,7 @@ export const default_hit_detector = function (cs) {
     return;
  };
 
- export const build_kinetic_position_updater = function (iObj, bbox=[-5, 5, 0, 10, -5, 5], g=[0, -9.8, 0], nStates = 5) {
+ export const build_kinetic_position_updater = function (iObj, bbox=[-5, 5, 0, 10, -5, 5], g=[0, -9.8, 0], nStates = 12) {
     // console.log(iObj);
     // Update position if being dragged.
 

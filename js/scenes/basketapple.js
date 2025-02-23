@@ -13,22 +13,6 @@ let badAppleScore = -2;
 let goodAppleScore = 3;
 let badAppleRatio = 0.66;
 
-const tableMinX = -0.33;
-const tableMaxX = 0.33;
-const tableMinY = 0.3;
-const tableMaxY = 0.5;
-const tableMinZ = -1.17;
-const tableMaxZ = -0.65;
-
-function isPositionOnTheTable(pos) {
-   const x = pos[0];
-   const y = pos[1];
-   const z = pos[2];
-   if(x<tableMinX||x>tableMaxX) return false;
-   if(y<tableMinY||y>tableMaxY) return false;
-   if(z<tableMinZ||z>tableMaxZ) return false;
-   return true;
-}
 
 export const init = async model => {
    
@@ -54,25 +38,42 @@ export const init = async model => {
 
    // clay.defineMeshFromObjSrc('table', '../media/objs/table.obj');
    // clay.defineMeshFromObjSrc('hoop', '../media/objs/hoop.obj');
-   clay.defineMeshFromObjSrc('apple', '../media/objs/apple.obj');
+   // clay.defineMeshFromObjSrc('apple', '../media/objs/apple.obj');
    // clay.defineMeshFromObjSrc('obj', '../media/objs/teapot.obj');
 
    // const table = model.add('table');
    const hoop = model.add('hoop');
+   const hitbox = model.add('cube');
+
+   hoop.identity().move(0,2,-1).scale(0.3);
+   // hitbox.identity().move(0,1.9,-1).scale([0.2, 0.01, 0.2]);
+   hitbox.identity().move(0,1.9,-1).scale([0.2, 0.2, 0.2]);
 
    // let terrain = model.add('terrain').move(0,2,-3.5).scale(4.5, 3., 1.5).txtr(1);
    const buildIBall = (name, radius, pos, dxyz, rot, isBad) => {
       const iObj = {
          name: name,
-         obj: model.add('apple'),
+         obj: model.add('sphere'),
          pos: pos,
          // dxyz: [0, 0.1, 0],
          dxyz: dxyz,
          detectionRadius: radius,
          isBad: isBad,
-         wasOnTable: false,
+         wasInHitbox: false,
          animate: function () {
-            this.obj.identity().move(this.pos).turnY(rot).scale(0.75);
+            this.obj.identity().move(this.pos).turnY(rot).scale(radius);
+            const m = this.obj.getGlobalMatrix();
+            const isIntersect = cg.isSphereIntersectBox([m[12],m[13],m[14],radius], hitbox.getGlobalMatrix());
+            // const isIntersect = cg.isSphereIntersectBox([pos[0],pos[1],pos[2],radius], hitbox.getGlobalMatrix());
+            // console.log('animate, m: ', [m[12],m[13],m[14],radius]);
+            if(isIntersect) {
+               // console.log('isIntersect');
+               this.obj.color([0, 1, 1]);
+            }
+            else {
+               this.obj.color('white');
+            }
+            this.wasInHitbox = isIntersect;
          },
 
          onHit: function (cs) { console.log(`onHit by controller: ${cs.controller.toString()}`); this.obj.color([1,.5,.5]); },
@@ -81,18 +82,18 @@ export const init = async model => {
          onUnDrag: function (cs) { console.log('onUnDrag'); this.obj.color(isBad?[0,1,0]:[1,0,0]); },
          onUnGrab: function (cs) { 
             console.log('onUnGrab'); 
-            this.obj.color([1,.5,.5]); 
-            if(!this.wasOnTable&&isPositionOnTheTable(this.pos)) {
-               score += this.isBad?badAppleScore:goodAppleScore;
-               this.wasOnTable = true;
-            }
+            // this.obj.color([1,.5,.5]); 
+            // if(!this.wasOnTable&&isPositionOnTheTable(this.pos)) {
+            //    score += this.isBad?badAppleScore:goodAppleScore;
+            //    this.wasOnTable = true;
+            // }
          },
          onUnHit: function (cs) { console.log('onUnHit'); this.obj.color('white'); },
          // onIdle: function () {},
          // onMoving: function () {},
       };
 
-      iObj.updatePos = interactive.build_kinetic_position_updater(iObj, [-2, 2, 0, 5, -2, 2]);
+      iObj.updatePos = interactive.build_kinetic_position_updater(iObj, [-1.5, 1.5, 0, 5, -1.5, 1.5], [0, -0.4, 0]);
       return iObj;
    }
 
@@ -102,7 +103,7 @@ export const init = async model => {
    const interactableObjs = [
    ];
 
-   for(let i=0; i<4; i++) {
+   for(let i=0; i<8; i++) {
       const isBad = Math.random() < badAppleRatio;
       interactableObjs.push(buildIBall(`${isBad?'Bad':'Good'}`, 0.085, [randomFromInterval(-2, 2), 0, randomFromInterval(-2, 2)], 
       // [randomFromInterval(-2, 2), randomFromInterval(0, 15), randomFromInterval(-2, 2)], randomFromInterval(0, Math.PI), isBad));
@@ -118,21 +119,21 @@ export const init = async model => {
 
    right_g2.render = function() {
       const rightControllerIObj = rcs.interactingWithIObj;
-      const right_debug_text = `Put Apple on\nthe table.\nApple Type: \n> ${rightControllerIObj?rightControllerIObj.name:'None'}\nPos: \n${rightControllerIObj?rightControllerIObj.pos.map(it => {return it.toFixed(2);}):'None'}\nonTable: ${rightControllerIObj?isPositionOnTheTable(rightControllerIObj.pos):'None'}\nScore: ${score}`;
+      // const right_debug_text = `Put Apple on\nthe table.\nApple Type: \n> ${rightControllerIObj?rightControllerIObj.name:'None'}\nPos: \n${rightControllerIObj?rightControllerIObj.pos.map(it => {return it.toFixed(2);}):'None'}\nonTable: ${rightControllerIObj?isPositionOnTheTable(rightControllerIObj.pos):'None'}\nScore: ${score}`;
       this.textHeight(.05);
-      this.text(right_debug_text, 0.0, 0.0);
+      // this.text(right_debug_text, 0.0, 0.0);
    };
 
    left_g2.render = function() {
       const leftControllerIObj = lcs.interactingWithIObj;
-      const left_debug_text = `Put Apple on\nthe table.\nApple Type: \n> ${leftControllerIObj?leftControllerIObj.name:'None'}\nPos: \n${leftControllerIObj?leftControllerIObj.pos.map(it => {return it.toFixed(2);}):'None'}\nonTable: ${leftControllerIObj?isPositionOnTheTable(leftControllerIObj.pos):'None'}\nScore: ${score}`;
+      // const left_debug_text = `Put Apple on\nthe table.\nApple Type: \n> ${leftControllerIObj?leftControllerIObj.name:'None'}\nPos: \n${leftControllerIObj?leftControllerIObj.pos.map(it => {return it.toFixed(2);}):'None'}\nonTable: ${leftControllerIObj?isPositionOnTheTable(leftControllerIObj.pos):'None'}\nScore: ${score}`;
       left_g2.textHeight(.05);
-      left_g2.text(left_debug_text, 0.0, 0.0);
+      // left_g2.text(left_debug_text, 0.0, 0.0);
    };
 
    model.animate(() => {
       // table.identity().move(0,0,-1).turnX(.01 * Math.PI).scale(1);
-      hoop.identity().move(0,1,-1).turnX(.01 * Math.PI).scale(0.5);
+
       iSubSys.update();
 
       left_g2.update();

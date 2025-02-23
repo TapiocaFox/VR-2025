@@ -2,6 +2,7 @@ export default () => {
    return {
       enableSceneReloading: true,
       scenes: [ 
+            { name: "basketapple"  , path: "./basketapple.js"  , public: true },
             { name: "bad_apple"  , path: "./bad_apple.js"  , public: true },
             { name: "ennichi"  , path: "./ennichi.js"  , public: true },
             { name: "obj_mesh"  , path: "./obj_mesh.js"  , public: true },
