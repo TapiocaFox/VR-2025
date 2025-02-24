@@ -84,7 +84,7 @@ export const init = async model => {
    const interactableObjs = [
    ];
 
-   for(let i=0; i<8; i++) {
+   for(let i=0; i<12; i++) {
       const isBad = Math.random() < badAppleRatio;
       interactableObjs.push(buildIBall(`${isBad?'Bad':'Good'}`, 0.085, randPos(), 
       // [randomFromInterval(-2, 2), randomFromInterval(0, 15), randomFromInterval(-2, 2)], randomFromInterval(0, Math.PI), isBad));
@@ -100,7 +100,7 @@ export const init = async model => {
    const hitbox = model.add('cube');
 
    hoop.identity().move(0,1,-1.5).scale(0.3);
-   hitbox.identity().move(0,.8,-1.4).scale([0.15, 0.01, 0.15]).opacity(.1);
+   hitbox.identity().move(0,.855,-1.4).scale([0.15, 0.01, 0.15]).opacity(.0);
 
    model.animate(() => {
       iSubSys.update();
