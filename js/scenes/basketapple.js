@@ -11,7 +11,7 @@ function randomFromInterval(min, max) {
 let score = 0;
 let badAppleScore = -2;
 let goodAppleScore = 3;
-let badAppleRatio = 0.66;
+let badAppleRatio = 0.5;
 
 const bbox_scale = 1.5;
 
@@ -20,8 +20,8 @@ export const init = async model => {
    const hudG2 = new G2().setAnimate(true);
    hudG2.render = function() {
       const text = `Score: ${score}`;
-      this.setColor('white');
-      this.textHeight(.05);
+      this.setColor('red');
+      this.textHeight(.08);
       this.text(text, -0.25, 0.0);
    }
    model.txtrSrc(1,hudG2.getCanvas());
@@ -45,16 +45,16 @@ export const init = async model => {
          isBad: isBad,
          wasInHitbox: false,
          animate: function () {
-            this.obj.identity().move(this.pos).turnY(rot).scale(radius);
-            const m = this.obj.getGlobalMatrix();
-            const isIntersect = cg.isSphereIntersectBox([m[12],m[13],m[14],radius], hitbox.getGlobalMatrix());
+            // const m = this.obj.getGlobalMatrix();
+            const isIntersect = cg.isSphereIntersectBox([this.pos[0],this.pos[1],this.pos[2],radius], hitbox.getGlobalMatrix());
             // const isIntersect = cg.isSphereIntersectBox([pos[0],pos[1],pos[2],radius], hitbox.getGlobalMatrix());
             // console.log('animate, m: ', [m[12],m[13],m[14],radius]);
-            if(this.wasInHitbox&&!isIntersect) {
+            if(this.wasInHitbox&&!isIntersect&&!this.controllerInteractions.isBeingGrabbed) {
                score += this.isBad?badAppleScore:goodAppleScore;
                // this.obj.color('white');
                this.pos = randPos();
             }
+            this.obj.identity().move(this.pos).turnY(rot).scale(radius);
             this.wasInHitbox = isIntersect;
          },
 
@@ -75,7 +75,7 @@ export const init = async model => {
    }
 
    const randPos = () => {
-      return [randomFromInterval(-bbox_scale, bbox_scale), 0, randomFromInterval(-bbox_scale, bbox_scale)];
+      return [randomFromInterval(-bbox_scale, bbox_scale), 0, randomFromInterval(-bbox_scale, 0)];
    };
 
    const randomVector = (v) => {
@@ -84,7 +84,7 @@ export const init = async model => {
    const interactableObjs = [
    ];
 
-   for(let i=0; i<12; i++) {
+   for(let i=0; i<8; i++) {
       const isBad = Math.random() < badAppleRatio;
       interactableObjs.push(buildIBall(`${isBad?'Bad':'Good'}`, 0.085, randPos(), 
       // [randomFromInterval(-2, 2), randomFromInterval(0, 15), randomFromInterval(-2, 2)], randomFromInterval(0, Math.PI), isBad));
