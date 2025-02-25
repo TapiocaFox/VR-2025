@@ -9,7 +9,7 @@ import { createInput, Input } from "./inputAPI.js";
 import { EditText } from "./editText.js";
 import { CodeEditor } from "./codeEditor.js";
 import * as keyboardInput from "../../util/input_keyboard.js";
-import { g2 } from "../../util/g2.js";
+import { G2 } from "../../util/g2.js";
 import { videoHandTracker } from "./videoHandTracker.js";
 import * as glUtil from "./gl_util.js"
 import * as clayExtensions from "./clay_extensions.js";
@@ -22,6 +22,8 @@ import * as sync from "/js/util/sync.js";
 import * as input from "./inputEvents.js";
 import * as room_mng from "/js/util/room_manager.js";
 import * as audio from "../../util/spatial-audio.js"
+
+import * as txtrManager from "./textureManager.js";
 
 let copiedObj = {};
 let copiedObjID = [];
@@ -48,9 +50,6 @@ export function MeshInfo() {
 }
 
 let debug = false;
-
-// A hashmap to keep track of the texture that needs to be bind
-window.txtrMap = new Map();
 
 export function Clay(gl, canvas) {
    this.debug = state => debug = state;
@@ -254,150 +253,6 @@ let drawMesh = (mesh, materialId, textureSrc, txtr, bumpTextureSrc, bumptxtr, du
    let a = material.ambient, d = material.diffuse, s = material.specular, t = material.texture;
    if (t === undefined) t = [0,0,0,0];
    setUniform('Matrix4fv', 'uPhong', false, [a[0],a[1],a[2],0, d[0],d[1],d[2],0, s[0],s[1],s[2],s[3], t[0],t[1],t[2],t[3]]);
-
-   if (textureSrc) {
-     // LOAD THE TEXTURE IF IT HAS NOT BEEN LOADED.
-     if (!textures.hasOwnProperty(textureSrc)) {
-       if (typeof textureSrc === 'function') {
-         textures[textureSrc] = {
-            resource : [], 
-            resourceIdx : 0, width: textureCanvas.width, height: textureCanvas.height
-         };
-
-         const textureRecord = textures[textureSrc];
-         for (let i = 0; i < 3; i += 1) {
-            textureRecord.resource.push(gl.createTexture());   
-         }
-
-         for (let i = 0; i < textureRecord.resource.length; i += 1) {
-            gl.bindTexture   (gl.TEXTURE_2D, textureRecord.resource[i]);
-            gl.texImage2D    (gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, textureCanvas);
-            //gl.texParameteri (gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-            //gl.texParameteri (gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-            gl.texParameteri (gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-            gl.texParameteri (gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-         }
-       }
-       else if (textureSrc == 'camera') {
-
-         // VIDEO TEXTURE FROM THE CAMERA CAN START IMMEDIATELY
-
-         textures[textureSrc] = {resource : [gl.createTexture(), gl.createTexture(), gl.createTexture()], resourceIdx : 0,
-            width: videoFromCamera.width, height: videoFromCamera.height};
-         const textureRecord = textures[textureSrc];
-         for (let i = 0; i < textureRecord.resource.length; i += 1) {
-            gl.bindTexture   (gl.TEXTURE_2D, textureRecord.resource[i]);
-            gl.texParameteri (gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-            gl.texParameteri (gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_NEAREST);
-         }
-       }
-       else if (textureSrc == 'anidraw') {
-
-         // TEXTURE FROM ANIDRAW
-
-         textures.anidraw = {resource : [gl.createTexture()
-            //, gl.createTexture(), gl.createTexture()
-            ], resourceIdx : 0, 
-            width: anidrawCanvas.width, height: anidrawCanvas.height};
-         const textureRecord = textures[textureSrc];
-         for (let i = 0; i < textureRecord.resource.length; i += 1) {
-            gl.bindTexture   (gl.TEXTURE_2D, textureRecord.resource[i]);
-            gl.texParameteri (gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-            gl.texParameteri (gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-         }
-       }
-       else {
-         // MARK AS LOADING IN-PROGRESS TO AVOID LOADING REPEATEDLY
-         textures[textureSrc] = TEXTURE_LOAD_STATE_UNFINISHED; 
-         let image = new Image();
-         this.imageLoad(image, textureSrc).catch((err) => {console.error(err);} );
-       }
-     }
-     else if (textures[textureSrc] != TEXTURE_LOAD_STATE_UNFINISHED) {
-       if (typeof textureSrc === 'function') {
-         if (prevTextureBindPoint != gl.TEXTURE0) {
-            prevTextureBindPoint = gl.TEXTURE0;
-            gl.activeTexture(gl.TEXTURE0);
-         }
-         const textureRecord = textures[textureSrc];
-         const texResource = textureRecord.resource[textureRecord.resourceIdx];
-         if (texResource != prevTextureResource) {
-            prevTextureResource = texResource;
-            gl.bindTexture(gl.TEXTURE_2D, texResource);
-         }
-         //textureRecord.resourceIdx = (textureRecord.resourceIdx + 1) % textureRecord.resource.length;
-         textureCanvasContext2D.putImageData(clearTexture, 0, 0);
-         textureSrc();
-         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, textureCanvas);
-       }
-       // VIDEO TEXTURE FROM THE CAMERA AND ANIDRAW NEED TO BE REFRESHED REPEATEDLY
-       else if (textureSrc == 'camera') {
-         if (window.videoFromCameraIsReady) {
-            if (prevTextureBindPoint != gl.TEXTURE0) {
-               prevTextureBindPoint = gl.TEXTURE0;
-               gl.activeTexture(gl.TEXTURE0);
-            }
-            const textureRecord = textures[textureSrc];
-            const texResource = textureRecord.resource[textureRecord.resourceIdx]
-            if (texResource != prevTextureResource) {
-               prevTextureResource = texResource;
-               gl.bindTexture(gl.TEXTURE_2D, texResource);
-            }
-            if (frameCount % 4 == 0) {
-               textureRecord.resourceIdx = (textureRecord.resourceIdx + 1) % 3;
-               gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, videoFromCamera);
-            }
-         }
-       }
-       else if (textureSrc == 'anidraw') {
-          if (prevTextureBindPoint != gl.TEXTURE2) {
-             prevTextureBindPoint = gl.TEXTURE2;
-             gl.activeTexture(gl.TEXTURE2);
-          }
-          const textureRecord = textures.anidraw;
-          const texResource = textureRecord.resource[textureRecord.resourceIdx];
-          if (prevTextureResource != texResource) {
-             prevTextureResource = texResource;
-             gl.bindTexture(gl.TEXTURE_2D, texResource);
-          }
-          if (anidraw.needsDisplayUpdate) {
-             textureRecord.resourceIdx = (textureRecord.resourceIdx + 1) % textureRecord.resource.length;
-             gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, anidrawCanvas);
-          }
-       } else {
-          if (prevTextureBindPoint != gl.TEXTURE0) {
-             prevTextureBindPoint = gl.TEXTURE0;
-             gl.activeTexture(gl.TEXTURE0);
-          }
-          const texResource = textures[textureSrc].resource;
-          if (prevTextureResource != texResource) {
-             prevTextureResource = texResource;
-             gl.bindTexture(gl.TEXTURE_2D, texResource);
-          }
-       }
-     }
-   }
-
-   if (bumpTextureSrc) {
-     if (!textures.hasOwnProperty(bumpTextureSrc)) {
-        textures[bumpTextureSrc] = TEXTURE_LOAD_STATE_UNFINISHED; 
-        let image = new Image();
-        this.imageLoad(image, bumpTextureSrc).catch((err) => {console.error(err);} );
-     }
-     else {
-        if (prevTextureBindPoint != gl.TEXTURE1) {
-           prevTextureBindPoint = gl.TEXTURE1;
-           gl.activeTexture(gl.TEXTURE1);
-        }
-        const texResource = textures[bumpTextureSrc].resource;
-        if (prevTextureResource != texResource) {
-           prevTextureResource = texResource;
-           gl.bindTexture(gl.TEXTURE_2D, texResource);
-           gl.texParameteri (gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-           gl.texParameteri (gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_NEAREST);
-        }
-     }
-   }
 
    // CANCEL DRAWING IF THE MESH DOES NOT EXIST
 
@@ -740,21 +595,18 @@ let renderParticlesMesh = mesh => {
       order.push(i);
    order.sort((a,b) => cg.dot(Z,data[a]?data[a].p: -1) - cg.dot(Z,data[b]?data[b].p: -1));
 
-/*
-   Need to add an option for p to be 2 points.
-   The particle will go from p[0] to p[1], and its normal will point toward the viewer.
-*/
-
-   let setVertex = (j, p, n, s, c, t, u, v, uRaw, vRaw) => {
+   let setVertex = (j, p, n, s, c, u, v, uRaw, vRaw) => {
       let nx = X, ny = Y, nz = Z;
       let pos, d = [1,0,0];
+      let sx = s[0] ? s[0] : s;
+      let sy = s[1] ? s[1] : s;
       if (Array.isArray(p[0])) {
          let c = cg.mix(p[0],p[1],.5,.5);
          d = cg.mix(p[0],p[1],-1, 1);
          ny = cg.normalize(cg.cross(nz,d));
-         pos = [ c[0] + u * d[0] + v * s * ny[0],
-                 c[1] + u * d[1] + v * s * ny[1],
-                 c[2] + u * d[2] + v * s * ny[2] ];
+         pos = [ sx * c[0] + u * d[0] + v * ny[0],
+                 sy * c[1] + u * d[1] + v * ny[1],
+                 sx * c[2] + u * d[2] + v * ny[2] ];
       }
       else {
          if (n) {
@@ -769,9 +621,9 @@ let renderParticlesMesh = mesh => {
                ny = cg.normalize(cg.cross(nz,nx));
             }
          }
-         pos = [ p[0] + u * s * nx[0] + v * s * ny[0],
-                 p[1] + u * s * nx[1] + v * s * ny[1],
-                 p[2] + u * s * nx[2] + v * s * ny[2] ];
+         pos = [ p[0] + u * sx * nx[0]                 ,
+                 p[1] +                  v * sy * ny[1],
+                 p[2] + u * sx * nx[2] + v * sy * ny[2] ];
       }
       let V = vertexArray(pos, nz, null, [uRaw, vRaw], c);
       for (let k = 0 ; k < 16 ; k++)
@@ -786,13 +638,14 @@ let renderParticlesMesh = mesh => {
       let s = d.s ? d.s : .01;
       let c = d.c;
       let t = d.t ? d.t : [0,0,1,1];
-      setVertex(6 * i    , p, n, s, c, t, -.5, -.5, t[0], t[3]); // NOTE: passing in raw UVs as well
-      setVertex(6 * i + 1, p, n, s, c, t,  .5, -.5, t[2], t[3]);
-      setVertex(6 * i + 2, p, n, s, c, t, -.5,  .5, t[0], t[1]);
-      setVertex(6 * i + 3, p, n, s, c, t, -.5,  .5, t[0], t[1]);
-      setVertex(6 * i + 4, p, n, s, c, t,  .5, -.5, t[2], t[3]);
-      setVertex(6 * i + 5, p, n, s, c, t,  .5,  .5, t[2], t[1]);
+      setVertex(6 * i    , p, n, s, c, -.5, -.5, t[0], t[3]); // NOTE: passing in raw UVs as well
+      setVertex(6 * i + 1, p, n, s, c,  .5, -.5, t[2], t[3]);
+      setVertex(6 * i + 2, p, n, s, c, -.5,  .5, t[0], t[1]);
+      setVertex(6 * i + 3, p, n, s, c, -.5,  .5, t[0], t[1]);
+      setVertex(6 * i + 4, p, n, s, c,  .5, -.5, t[2], t[3]);
+      setVertex(6 * i + 5, p, n, s, c,  .5,  .5, t[2], t[1]);
    }
+   mesh.order = order;
 }
 
 let createSquareMesh = (i,j,k, z) => {
@@ -1874,10 +1727,6 @@ let fl = 5;                                                          // CAMERA F
    this.controllerBallSize = 0.02;
 
    this.animate = view => {
-      if (window.txtrMap)
-         for (let [key, val] of window.txtrMap)
-            this.txtrCallback(key, val[0], val[1]);
-
       window.timestamp++;
       window.needUpdateInput = true;
       window.mySharedObj = [];
@@ -1910,7 +1759,7 @@ let fl = 5;                                                          // CAMERA F
       if (window.animate)
          window.animate();
 
-      if (! window.isVideo) {
+      /*if (! window.isVideo) {
          videoScreen1.scale(0);
          videoScreen2.scale(0);
       }
@@ -1920,9 +1769,9 @@ let fl = 5;                                                          // CAMERA F
          videoScreen.setMatrix(cg.mInverse(views[0].viewMatrix))
                     //.move(0,0,-.3*s).turnY(Math.PI).scale(.3197*s,.2284*s,.001).scale(.181);
                     .move(0,0,-.3*s).scale(.3197*s,.2284*s,.001).scale(.181);
-      }
+      }*/
 
-      if (window.interactMode != 2) {
+      /*if (window.interactMode != 2) {
          anidrawScreen.scale(0);
       }
       else {
@@ -1932,7 +1781,7 @@ let fl = 5;                                                          // CAMERA F
                       .move(0,-.08*anidrawSlant,0).turnX(-1.2*anidrawSlant)
                       //.turnY(Math.PI).scale(.3197*s,.2284*s,.001).scale(.181);
                       .scale(.3197*s,.2284*s,.001).scale(.181);
-      }
+      }*/
 
       setUniform('1i', 'uWhitescreen', window.isWhitescreen);       
       clay.peopleBillboards.update();
@@ -2037,7 +1886,7 @@ let fl = 5;                                                          // CAMERA F
       if (videoHandTracker && ! window.vr)
          videoHandTracker.update();
 
-      g2.update();
+      //g2.update();
    }
 
 // PREDEFINED PROCEDURAL TEXTURES
@@ -2378,8 +2227,6 @@ function Node(_form) {
    this.info      = value   => { if (this.prop('_blend') && this._info != value) activeSet(true);
                                 this._info = value;    return this; }
    this.getInfo   = ()      => { return this._info; }
-   this.texture   = src     => { this._texture = src;  return this; }
-   this.bumpTexture = src   => { this._bumpTexture = src; return this; }
    this.bevel     = tf      => { this._bevel = tf === undefined ? true : tf; return this; }
    this.blend     = tf      => { if (this._blend != tf) activeSet(true);
                                 this._blend = tf === undefined ? false : tf; return this; }
@@ -2564,11 +2411,14 @@ function Node(_form) {
       for (let n = 0 ; n < text.length ; n++)
          if (text.charAt(n) == '\n')
             lines++;
-      this.child(0).color(10,10,10).texture(() => {
-         g2.setColor('white');
-         g2.textHeight(textHeight);
-         g2.fillText(text, .5, .5 + .5 * lines * textHeight, 'center');
-      });
+
+      let g2 = new G2();
+      g2.setColor('white');
+      g2.textHeight(textHeight);
+      g2.fillText(text, .5, .5 + .5 * lines * textHeight, 'center');
+      this.txtrSrc(14, g2.getCanvas());
+
+      this.child(0).color(10,10,10).txtr(14);
       return this;
    }
    this.createAxes = (al, r) => {
@@ -2630,13 +2480,14 @@ function Node(_form) {
 
    this.framedPicture = (w,h,t,source) => {
       let picture = this.add();
+      this.txtrSrc(1, source);
       picture.add('cube').move(0,-h/2-2*t,  .6*t).scale(w/2+2*t,t,.6*t).color(.2,.1,.05);
       picture.add('cube').move(0, h/2+2*t,  .6*t).scale(w/2+2*t,t,.6*t).color(.2,.1,.05);
       picture.add('cube').move(-w/2-2*t, 0, .6*t).scale(t,h/2+3*t,.6*t).color(.2,.1,.05);
       picture.add('cube').move( w/2+2*t, 0, .6*t).scale(t,h/2+3*t,.6*t).color(.2,.1,.05);
       picture.add('cube').move(0,0,-t/100).scale(w/2+t*t,h/2+3*t,t/100).color(.2,.1,.05);
       picture.add('cube').scale(w/2+t,h/2+t,t/1000).dull().color(.5,.45,.4);
-      picture.add('cube').move(0,0,t/100).scale(w/2,h/2,t/100).dull().texture(source);
+      picture.add('cube').move(0,0,t/100).scale(w/2,h/2,t/100).dull().txtr(1);
       return picture;
    }
 
@@ -2823,49 +2674,83 @@ function Node(_form) {
 
    // NEWER MULTI-TEXTURE-UNIT TEXTURE HANDLING
 
-   this.txtr = n => {
-      this._txtr = n;
-      return this;
-   }
-   this.bumptxtr = n => {
-      this._bumptxtr = n;
-      return this;
-   }
+   this.setTxtr = (src, a, b) => {
+      let txtr = undefined;
+      let do_not_animate = undefined;
 
-   let txtrImage = [];
-
-   this.txtrSrc = (txtr, src, do_not_animate) => {
-      window.txtrMap.set(txtr, [src, do_not_animate]);
-
-      if (txtrImage[txtr] && txtrImage[txtr].src == src && (txtr == 15 || txtrImage[txtr].count == 20)) {
-          gl.activeTexture (gl.TEXTURE0 + txtr);
-          gl.bindTexture   (gl.TEXTURE_2D, gl.createTexture());
-          gl.texImage2D    (gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, txtrImage[txtr].image);
-          gl.texParameteri (gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-          gl.texParameteri (gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-	  if (txtr < 15)
-             delete txtrImage[txtr];
+      if (a !== undefined) {
+         if (typeof a == 'number') txtr = a;
+         else do_not_animate = a;
       }
 
+      if (b !== undefined) {
+         if (typeof b == 'boolean') do_not_animate = b;
+         else txtr = b;
+      }
+
+      if (txtr === undefined)
+         txtr = txtrManager.getArbitraryChannel();
+      this.txtrSrc(txtr, src, do_not_animate);
+      return this.txtr(txtr);
+   }
+
+   this.setBumptxtr = (src, a, b) => {
+      let txtr = undefined;
+      let do_not_animate = undefined;
+
+      if (a !== undefined) {
+         if (typeof a == 'number') txtr = a;
+         else do_not_animate = a;
+      }
+
+      if (b !== undefined) {
+         if (typeof b == 'boolean') do_not_animate = b;
+         else txtr = b;
+      }
+      
+      if (txtr === undefined)
+         txtr = txtrManager.getArbitraryChannel();
+      this.txtrSrc(txtr, src, do_not_animate);
+      return this.bumptxtr(txtr);
+   }
+
+   this.txtr = (txtr) => {
+      this._txtr = txtr;
+      return this;
+   }
+
+   this.bumptxtr = (txtr) => {
+      this._bumpTxtr = txtr;
+      return this;
+   }
+
+   this.txtrSrc = (txtr, src, do_not_animate) => {
+      // New texture API
+      txtrManager.setTextureToChannel(txtr);
+
       if (typeof src == 'string') {                             // IF THE TEXTURE SOURCE IS AN IMAGE FILE
-         if (! txtrImage[txtr] || txtrImage[txtr].src != src) { // THEN IT IS SENT TO THE GPU ONLY ONCE.
-            let image = new Image();                           
-            image.onload = () => txtrImage[txtr] = { src: src, image: image, count: 0 };
-            image.src = src;
-         }
-         else
-            txtrImage[txtr].count++;
+         let image = new Image();                           
+         image.onload = () => {
+             gl.activeTexture (gl.TEXTURE0 + txtr);
+	          gl.bindTexture   (gl.TEXTURE_2D, gl.createTexture());
+             gl.texImage2D    (gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+             gl.texParameteri (gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+             gl.texParameteri (gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+	   }
+         image.src = src;
          delete _canvas_txtr[txtr];
       }
       else {                                      // FOR ANY OTHER TEXTURE SOURCE,
          if (! src._animate)
             do_not_animate = true;
-         gl.activeTexture (gl.TEXTURE0 + txtr);   // ASSUME THAT ITS CONTENT CAN BE ANIMATED.
-         gl.bindTexture   (gl.TEXTURE_2D, gl.createTexture());
-         gl.texParameteri (gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-         gl.texParameteri (gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-         _canvas_txtr[txtr] = { src: src, counter: do_not_animate ? 1 : Number.MAX_SAFE_INTEGER };
+            gl.activeTexture (gl.TEXTURE0 + txtr);   // ASSUME THAT ITS CONTENT CAN BE ANIMATED.
+            gl.bindTexture   (gl.TEXTURE_2D, gl.createTexture());
+            gl.texParameteri (gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+            gl.texParameteri (gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+            _canvas_txtr[txtr] = { src: src, counter: do_not_animate ? 1 : Number.MAX_SAFE_INTEGER };
       }
+
+      return txtr;
    }
 }
 
@@ -2884,10 +2769,10 @@ window._canvas_txtr = [];
       left : this.vrWidgets.add('sphere').dull(1).scale(0),
       right: this.vrWidgets.add('sphere').dull(1).scale(0),
    };
-   let videoScreen1 = root.add('cube').texture('camera').scale(0);
+   //let videoScreen1 = root.add('cube').texture('camera').scale(0);
    this.model = root.add();
-   let videoScreen2 = root.add('cube').texture('camera').scale(0);
-   let anidrawScreen = root.add('cube').texture('anidraw');
+   //let videoScreen2 = root.add('cube').texture('camera').scale(0);
+   //let anidrawScreen = root.add('cube').texture('anidraw');
    let anidrawSlant = 0;
    let model = this.model;
    let remoteObjRoot = root.add();
@@ -2911,9 +2796,6 @@ window._canvas_txtr = [];
    window.editText = new EditText();
    window.codeEditorObj = root.add();
    window.codeEditor = new CodeEditor(codeEditorObj);
-
-   // Call the txtr function
-   this.txtrCallback = (txtr, src, do_not_animate) => model.txtrSrc(txtr, src, do_not_animate);
 
    // NOTE(KTR): Extensions
 
@@ -3082,9 +2964,11 @@ window._canvas_txtr = [];
       let Z = vm.slice(8,11);
 
       let setVertex = (j, p, s, c, t, u, v) => {
-         let pos = [ p[0] + u * s * X[0] + v * s * Y[0],
-                     p[1] + u * s * X[1] + v * s * Y[1],
-                     p[2] + u * s * X[2] + v * s * Y[2] ];
+         let su = s[0] ? s[0] : s;
+         let sv = s[1] ? s[1] : s;
+         let pos = [ p[0] + u * su * X[0] + v * sv * Y[0],
+                     p[1] + u * su * X[1] + v * sv * Y[1],
+                     p[2] + u * su * X[2] + v * sv * Y[2] ];
          let tu = t[0] + (.5+u) * t[2];
          let tv = t[1] + (.5+v) * t[3];
          let V = vertexArray(pos, Z, null, [tu, 1 - tv], c);

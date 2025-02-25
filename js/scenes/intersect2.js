@@ -12,7 +12,7 @@ export const init = async model => {
       ball.identity().move(-.1,1.5+s,0).turnX(t  ).turnY(t  ).scale(r);
       box .identity().move( .1,1.5-s,0).turnY(t/2).turnX(t/2).scale(.1,.125,.15);
       let m = ball.getGlobalMatrix();
-      let isIntersect = cg.isSphereIntersectBox([m[12],m[13],m[2],r], box.getGlobalMatrix());
+      let isIntersect = cg.isSphereIntersectBox([m[12],m[13],m[14],r], box.getGlobalMatrix());
       ball.color(isIntersect ? [1,.5,.5] : [1,1,1]);
       box .color(isIntersect ? [1,.5,.5] : [1,1,1]);
    });
