@@ -32,6 +32,9 @@ export default () => {
             { name: "widgets"       , path: "./widgets.js"       , public: true },
             { name: "statue"        , path: "./statue.js"        , public: true },
             { name: "severalGLTF"   , path: "./severalGLTF.js"   , public: true },
+
+            { name: "wordcloud"     , path: "./wordcloud.js"     , public: true },
+            { name: "wordcloud2"    , path: "./wordcloud2.js"    , public: true },
       ]
    };
 }
