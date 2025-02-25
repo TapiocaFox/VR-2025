@@ -16,7 +16,7 @@ export const init = async model => {                                            
       let u  = wordatlas[4*n + 1] / 1844;                                        // the position and scale of each
       let du = wordatlas[4*n + 2] / 1844;                                        // word in the atlas.
       let v  = wordatlas[4*n + 3] / 1844;                                        //
-      let dv =                37 / 1844;                                         //
+      let dv =                 37 / 1844;                                        //
       data.push({                                                                //
          p: [ Math.random()-.5, Math.random()-.5, Math.random()-.5 ],            // Initially, give each particle
          s: [ du, dv ],                                                          // a random position in a cube
@@ -93,8 +93,8 @@ export const init = async model => {                                            
                      }                                                           // tile that it intersects.
                   }                                                              //
                }                                                                 //
-               testRay(L);                                                       //
-               testRay(R);                                                       //
+               testRay(L);                                                       // Do this test for both the left
+               testRay(R);                                                       // and right controller beam.
             }                                                                    //
       }                                                                          //
       L.wasDown = L.isDown;                                                      // Remember the previous trigger
