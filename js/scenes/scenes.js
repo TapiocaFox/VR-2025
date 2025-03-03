@@ -2,6 +2,7 @@ export default () => {
    return {
       enableSceneReloading: true,
       scenes: [ 
+            { name: "sentence_cloud"    , path: "./sentence_cloud.js"    , public: true },
             { name: "basketapple"  , path: "./basketapple.js"  , public: true },
             { name: "bad_apple"  , path: "./bad_apple.js"  , public: true },
             { name: "ennichi"  , path: "./ennichi.js"  , public: true },
