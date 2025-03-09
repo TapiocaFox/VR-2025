@@ -42,6 +42,10 @@ export default () => {
 
             { name: "wordcloud"     , path: "./wordcloud.js"     , public: true },
             { name: "wordcloud2"    , path: "./wordcloud2.js"    , public: true },
+            { name: "wordcloud3"    , path: "./wordcloud3.js"    , public: true },
+            { name: "wordcloud4"    , path: "./wordcloud4.js"    , public: true },
+            { name: "wordcloud5"    , path: "./wordcloud5.js"    , public: true },
       ]
    };
 }
+
