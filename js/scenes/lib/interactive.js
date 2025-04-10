@@ -17,7 +17,7 @@ export const Controller = Object.freeze({
 export class InteractiveSystem {
     constructor(model, interactableObjs, buttonState, joyStickState, leftControllerBeam, rightControllerBeam) {
         this.model = model;
-        this.interactableObjs = interactableObjs;
+        // this.interactableObjs = interactableObjs;
         this.buttonState = buttonState;
 
         this.controllerBeams = {};
@@ -41,84 +41,107 @@ export class InteractiveSystem {
             joyStickState: joyStickState.right,
         }; 
 
-        this.interactableObjs.forEach(iObj => {
-            iObj.timestamp = -1;
-            iObj.lastNStates = [];
-
-            iObj.controllerInteractions = {
-                isBeingHit: false,
-                isBeingGrabbed: false,
-                isBeingDragged: false,
-                byController: null,
-                beamMatrix: null,
-            }; 
-
-            iObj.beamMatrixPositionPairsOnEvent = {
-                onHit: null,
-                onGrab: null,
-                onDrag: null,
-                onUnDrag: null,
-                onUnGrab: null,
-                onUnHit: null,
-            }; 
-
-            iObj.remove = () => {
-                const index = this.interactableObjs.indexOf(iObj);
-                // this.model
-            };
-
-            iObj.getLastState = () => {
-                return iObj.lastNStates[iObj.lastNStates.length-1];
-            };
-
-            iObj.enqueueState = (state) => {
-                iObj.lastNStates.push(state);
-                while(iObj.lastNStates.length>numNStates) {
-                    iObj.lastNStates.shift();
-                }
-            };
-
-            iObj.enqueueCurrentState = () => {
-                iObj.enqueueState({
-                    timestamp: iObj.timestamp,
-                    pos: iObj.pos,
-                    dxyz: iObj.dxyz,
-                    controllerInteractions: iObj.controllerInteractions,
-                });
-            };
-
-            iObj.projectOntoBeam = (bm) => {
-                const o = bm.slice(12, 15);		// get origin of beam
-                const z = bm.slice( 8, 11);		// get z axis of beam
-                const p = cg.subtract(iObj.pos, o);	// shift point to be relative to beam origin
-                const d = cg.dot(p, z);		// compute distance of point projected onto beam
-                const q = cg.scale(z, d);		// find point along beam at that distance
-                return cg.add(o, q);		// shift back to global space
-            };
-            
-
-            // iObj.enqueueState({
-            //     timestamp: iObj.timestamp,
-            //     post: iObj.pos,
-            //     controllerInteractions: iObj.controllerInteractions,
-            // });
-
-            // "Polyfill"
-            iObj.name = iObj.name?iObj.name:'Unnamed';
-            iObj.pos = iObj.pos?iObj.pos:[0, 0, 0];
-            iObj.dxyz = iObj.dxyz?iObj.dxyz:[0, 0, 0];
-            iObj.detectHit = iObj.detectHit?iObj.detectHit:default_hit_detector.bind(iObj);
-            iObj.detectGrab = iObj.detectGrab?iObj.detectHit:default_grab_detector.bind(iObj);
-            iObj.detectDrag = iObj.detectDrag?iObj.detectDrag:default_drag_detector.bind(iObj);
-            iObj.updatePos = iObj.updatePos?iObj.updatePos:default_position_updater.bind(iObj);
-            
-            iObj.onHit = iObj.onHit?iObj.onHit:() => {};
-            iObj.onGrab = iObj.onGrab?iObj.onGrab:() => {};
-            iObj.onDrag = iObj.onDrag?iObj.onDrag:() => {};
-            iObj.onUnDrag = iObj.onUnDrag?iObj.onUnDrag:() => {};
-            iObj.onUnGrab = iObj.onUnGrab?iObj.onUnGrab:() => {};
-            iObj.onUnHit = iObj.onUnHit?iObj.onUnHit:() => {};
+        interactableObjs.forEach(iObj => {
+            this.addInteractableObj(iObj);
         });
+    }
+
+    addInteractableObj(iObj) {
+        iObj.timestamp = -1;
+        iObj.lastNStates = [];
+
+        iObj.controllerInteractions = {
+            isBeingHit: false,
+            isBeingGrabbed: false,
+            isBeingDragged: false,
+            byController: null,
+            beamMatrix: null,
+        }; 
+
+        iObj.beamMatrixPositionPairsOnEvent = {
+            onHit: null,
+            onGrab: null,
+            onDrag: null,
+            onUnDrag: null,
+            onUnGrab: null,
+            onUnHit: null,
+        }; 
+
+        iObj.remove = () => {
+            const index = this.interactableObjs.indexOf(iObj);
+            if (index !== -1) {
+                // Remove from interactable objects list
+                this.interactableObjs.splice(index, 1);
+                
+                // Remove from model if it exists
+                if (iObj.obj && this.model) {
+                    this.model.remove(iObj.obj);
+                    
+                    // Clean up geometries and materials if they exist
+                    if (iObj.obj.geometry) iObj.obj.geometry.dispose();
+                    if (iObj.obj.material) {
+                        if (Array.isArray(iObj.obj.material)) {
+                            iObj.obj.material.forEach(material => material.dispose());
+                        } else {
+                            iObj.obj.material.dispose();
+                        }
+                    }
+                }
+            }
+        };
+
+        iObj.getLastState = () => {
+            return iObj.lastNStates[iObj.lastNStates.length-1];
+        };
+
+        iObj.enqueueState = (state) => {
+            iObj.lastNStates.push(state);
+            while(iObj.lastNStates.length>numNStates) {
+                iObj.lastNStates.shift();
+            }
+        };
+
+        iObj.enqueueCurrentState = () => {
+            iObj.enqueueState({
+                timestamp: iObj.timestamp,
+                pos: iObj.pos,
+                dxyz: iObj.dxyz,
+                controllerInteractions: iObj.controllerInteractions,
+            });
+        };
+
+        iObj.projectOntoBeam = (bm) => {
+            const o = bm.slice(12, 15);		// get origin of beam
+            const z = bm.slice( 8, 11);		// get z axis of beam
+            const p = cg.subtract(iObj.pos, o);	// shift point to be relative to beam origin
+            const d = cg.dot(p, z);		// compute distance of point projected onto beam
+            const q = cg.scale(z, d);		// find point along beam at that distance
+            return cg.add(o, q);		// shift back to global space
+        };
+        
+
+        // iObj.enqueueState({
+        //     timestamp: iObj.timestamp,
+        //     post: iObj.pos,
+        //     controllerInteractions: iObj.controllerInteractions,
+        // });
+
+        // "Polyfill"
+        iObj.name = iObj.name?iObj.name:'Unnamed';
+        iObj.pos = iObj.pos?iObj.pos:[0, 0, 0];
+        iObj.dxyz = iObj.dxyz?iObj.dxyz:[0, 0, 0];
+        iObj.detectHit = iObj.detectHit?iObj.detectHit:default_hit_detector.bind(iObj);
+        iObj.detectGrab = iObj.detectGrab?iObj.detectHit:default_grab_detector.bind(iObj);
+        iObj.detectDrag = iObj.detectDrag?iObj.detectDrag:default_drag_detector.bind(iObj);
+        iObj.updatePos = iObj.updatePos?iObj.updatePos:default_position_updater.bind(iObj);
+        
+        iObj.onHit = iObj.onHit?iObj.onHit:() => {};
+        iObj.onGrab = iObj.onGrab?iObj.onGrab:() => {};
+        iObj.onDrag = iObj.onDrag?iObj.onDrag:() => {};
+        iObj.onUnDrag = iObj.onUnDrag?iObj.onUnDrag:() => {};
+        iObj.onUnGrab = iObj.onUnGrab?iObj.onUnGrab:() => {};
+        iObj.onUnHit = iObj.onUnHit?iObj.onUnHit:() => {};
+        this.interactableObjs.push(iObj);
     }
 
     updateTimestamps() {

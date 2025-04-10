@@ -24,9 +24,9 @@ export const init = async model => {
       this.textHeight(.08);
       this.text(text, -0.25, 0.0);
    }
+   
    model.txtrSrc(1,hudG2.getCanvas());
    const hudObj = model.add('square').txtr(1);
-   
 
    // const hoop = model.add();
    clay.defineMesh('hoop', clay.combineMeshes([
