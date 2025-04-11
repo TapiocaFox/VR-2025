@@ -67,7 +67,7 @@ export class InteractiveSystem {
             onUnHit: null,
         }; 
 
-        iObj.remove = () => {
+        iObj.destroy = () => {
             const index = this.interactableObjs.indexOf(iObj);
             if (index !== -1) {
                 // Remove from interactable objects list
