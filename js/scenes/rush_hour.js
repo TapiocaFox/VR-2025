@@ -14,16 +14,17 @@ const boardSize = 6;
 window.boardState = { board : "BBoKMxDDDKMoIAALooIoJLEEooJFFNoGGoxN", carsPositions: {}};   
 server.init('boardState', {});
 
-const boardScale = 1.5;
+const boardWidth = 1;
+const boardHeight = 0.33;
 
-const boardMinU = -boardScale / 2;
-const boardMaxU = boardScale / 2;
-const boardMinV = -boardScale / 2;
-const boardMaxV = boardScale / 2;
+const boardMinX = -boardWidth / 2;
+const boardMaxX = boardWidth / 2;
+const boardMinZ = -boardWidth / 2;
+const boardMaxZ = boardWidth / 2;
 
 // Move the board to the center of the screen, corresponding to the boardMinU and boardMinV, X and Z.
-const board = model.add('square').setColor('white').move(boardMinU, 0, boardMinV);
-board.scale(boardScale);
+const board = model.add('square').setColor('white').move(boardMinX, 0, boardMinZ);
+board.scale(boardWidth, boardHeight, boardWidth);
 
 const cellSize = 1.5 / boardSize;
 
@@ -49,7 +50,7 @@ const buildICar = (id, boardState) => {
     const bottomLeftCell = [0, 0]; // Interger 
     const topRightCell = [0, 0];  // Interger 
     const orientation = 'h'; // 'h' or 'v'
-    const pos = [0, 0]; // The position of the car on the board.
+    const pos = [0, 0, 0]; // The position of the car on the board.
     const obj = model.add('square').setColor(idToColor[id]);
 
     // Find the bottom left and top right cells of the car.
@@ -88,11 +89,11 @@ const buildICar = (id, boardState) => {
     }
 
     // Determine the position of the car. Bounded by the board min and max.
-    const u = boardMinU + bottomLeftCell[1] * cellSize;
-    const v = boardMinV + bottomLeftCell[0] * cellSize;
-    pos[0] = u;
-    pos[1] = v;
-    
+    const x = boardMinX + bottomLeftCell[1] * cellSize;
+    const z = boardMinV + bottomLeftCell[0] * cellSize;
+    pos[0] = x;
+    pos[1] = 0;
+    pos[2] = z;
 
     const iObj = {
         name: id,
@@ -102,8 +103,48 @@ const buildICar = (id, boardState) => {
             this.obj.move(this.pos[0], 0, this.pos[1]);
         }
     }
+
+
+    // Update the position of the car. Based on orientation. And the boundaries of the board.
+    iObj.updatePos = function() {
+        if(this.controllerInteractions.isBeingDragged) {
+            const beamMatrixBegin = this.beamMatrixPositionPairsOnEvent.onDrag[0];
+            const P = this.beamMatrixPositionPairsOnEvent.onDrag[1];
+            let bm = beamMatrixBegin;	// get controller beam matrix
+            let o = bm.slice(12, 15);		// get origin of beam
+            let x = bm.slice( 0, 3);		// get x axis of beam
+            let y = bm.slice( 4, 7);		// get y axis of beam
+            let z = bm.slice( 8, 11);		// get z axis of beam
+            let p = cg.subtract(P, o);	// shift point to be relative to beam origin
+            let dx = cg.dot(p, x);		// compute distance of point projected onto x
+            let dy = cg.dot(p, y);		// compute distance of point projected onto y
+            let dz = cg.dot(p, z);		// compute distance of point projected onto beam
+            
+            const beamMatrixNow = this.controllerInteractions.beamMatrix;
+            let bm_n = beamMatrixNow;
+            let o_n = bm_n.slice(12, 15);		// get origin of beam
+            let x_n = bm_n.slice( 0, 3);		// get x axis of beam
+            let y_n = bm_n.slice( 4, 7);		// get y axis of beam
+            let z_n = bm_n.slice( 8, 11);		// get z axis of beam
+            let x_s = cg.scale(x_n, dx);
+            let y_s = cg.scale(y_n, dy);
+            let z_s = cg.scale(z_n, dz);
+
+            // const newPos = cg.add(cg.add(cg.add(o_n, x_s), y_s), z_s);
+            // New position based on orientation. And the boundaries of the board.
+            if(this.orientation === 'h') {
+                const newPos = cg.max(cg.min(cg.add(this.pos, x_s), boardMaxX), boardMinX);
+                this.pos = newPos;
+            } else {
+                const newPos = cg.max(cg.min(cg.add(this.pos, z_s), boardMaxZ), boardMinZ);
+                this.pos = newPos;
+            }
+        }
+    }
+
     return iObj;
 };
+
 
 const newGame = () => {
     const board = window.boardState.board;
