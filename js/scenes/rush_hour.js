@@ -104,7 +104,6 @@ const buildICar = (id, boardState) => {
         }
     }
 
-
     // Update the position of the car. Based on orientation. And the boundaries of the board.
     iObj.updatePos = function() {
         if(this.controllerInteractions.isBeingDragged) {
