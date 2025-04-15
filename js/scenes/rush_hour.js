@@ -46,11 +46,12 @@ const getRandomBoardState = () => {
 
 // 58 BBoKMxDDDKMoIAALooIoJLEEooJFFNoGGoxN 9192
 const boardSize = 6;
-window.boardState = { board : "BBoKMxDDDKMoIAALooIoJLEEooJFFNoGGoxN", minMoves: 58, clusterSize: 9192, carsPositions: {}};   
-server.init('boardState', {});
+let generation = -1;
+server.init('boardState', { board : "BBoKMxDDDKMoIAALooIoJLEEooJFFNoGGoxN", minMoves: 58, clusterSize: 9192, carsPositions: {}, boardGeneration: 0});
+server.init('buttonMessages', {});
 
 const boardWidth = 1.;
-const boardHeight = 0.1;
+const boardHeight = 0.05;
 
 const boardMinX = -boardWidth / 2;
 const boardMaxX = boardWidth / 2;
@@ -212,14 +213,14 @@ export const init = async model => {
 
     const iCars = [];
     const iWalls = [];
-    const reset = () => {
-        console.log('Reset');
+
+    // Initialize the new generation.
+    const initNewGeneration = (boardState) => {
         const board = boardState.board;
         printBoardIn2D(board);
         iCars.forEach(iCar => iCar.destroy());
         iWalls.forEach(iWall => iWall.destroy());
-        // interactableObjs.forEach(iObj => iObj.destroy());
-        // iSubSys.addInteractableObj(iObj);
+
         // Build the ICars. Avoid repeating the same cell with same id.
         // Add the ICars using `addInteractableObj`.
         // Filter out all the unique ids from the board.
@@ -265,18 +266,34 @@ export const init = async model => {
         }
     };
 
-    const undo = () => {
-        console.log('Undo');
+    // Atomic operation. Reset the board.
+    const reset = () => {
+        console.log('Reset');
+        const boardState = server.synchronize('boardState');
+        boardState.boardGeneration++;
+        server.broadcastGlobal('boardState', boardState);
     };
 
+    // Atomic operation. Undo the last move.
+    const undo = () => {
+        console.log('Undo');
+        const boardState = server.synchronize('boardState');
+        boardState.boardGeneration++;
+        server.broadcastGlobal('boardState', boardState);
+    };
+
+    // Atomic operation. Get a random board state and reset the board.
     const random = () => {
         console.log('Random');
         const newBoardState = getRandomBoardState();
+        console.log(newBoardState.board);
+
+        const boardState = server.synchronize('boardState');
+        boardState.boardGeneration++;
         boardState.board = newBoardState.board;
         boardState.minMoves = newBoardState.minMoves;
         boardState.clusterSize = newBoardState.clusterSize;
-        console.log(boardState.board);
-        reset();
+        server.broadcastGlobal('boardState', boardState);
     };
 
     const controlPanelG2 = new G2();
@@ -284,26 +301,57 @@ export const init = async model => {
     // Move the board to the center of the screen, corresponding to the boardMinX and boardMinZ, X and Z.
     const board = model.add('cube').color('white').scale(boardWidth/2, boardHeight, boardWidth/2);
 
-
     // Add the board to the scene.
     const controlPanelObj = model.add('square').setTxtr(controlPanelG2.getCanvas());
     controlPanelG2.addWidget(controlPanelObj, 'button',  .7, -.8, '#80ffff', 'reset', () => {
-        reset();
+        // reset();
+        server.send('buttonMessages', {reset: true});
     });
 
     controlPanelG2.addWidget(controlPanelObj, 'button',  .3, -.8, '#80ffff', 'undo', () => {
-        undo();
+        // undo();
+        server.send('buttonMessages', {undo: true});
     });
 
     controlPanelG2.addWidget(controlPanelObj, 'button',  -.1, -.8, '#80ffff', 'random', () => {
-        random();
+        // random();
+        server.send('buttonMessages', {random: true});
     });
 
-    reset();
+    // reset();
 
     model.animate(() => {
         iSubSys.update();
         controlPanelG2.update(); controlPanelObj.identity().move(-.4,1.7,0).scale(.15);
+        const boardState = server.synchronize('boardState');
+        if(boardState.boardGeneration > generation) {
+            initNewGeneration(boardState);
+            generation = boardState.boardGeneration;
+        }
+        
+        if (clientID == clients[0]) {
+            server.sync('buttonMessages', msgs => {
+                let doReset = false;
+                let doUndo = false;
+                let doRandom = false;
+                for (let id in msgs) {
+                    doReset = doReset || msgs[id].reset;
+                    doUndo = doUndo || msgs[id].undo;
+                    doRandom = doRandom || msgs[id].random;
+                }
+
+                // Atomic operation.
+                if (doRandom) {
+                    random();
+                }
+                else if (doReset) {
+                    reset();
+                }
+                else if (doUndo) {
+                    undo();
+                }
+            });
+        }
     });
 
     controlPanelG2.render = function() {
