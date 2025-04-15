@@ -1,3 +1,4 @@
+import * as cg from "../render/core/cg.js";
 import { G2 } from "../util/g2.js";
 import * as interactive from "./lib/interactive.js";
 import { buttonState, joyStickState } from "../render/core/controllerInput.js";
@@ -52,6 +53,7 @@ server.init('buttonMessages', {});
 
 const boardWidth = 1.;
 const boardHeight = 0.05;
+const boardPosition = [0, 0.5, 0];
 
 const boardMinX = -boardWidth / 2;
 const boardMaxX = boardWidth / 2;
@@ -149,12 +151,9 @@ export const init = async model => {
         // The original point is the center of the car.
         const x = boardMinX + scale[0] + topLeftCell[0] * singleCellWidth;
         const z = boardMinZ + scale[2] + topLeftCell[1] * singleCellWidth;
-        pos[0] = x;
-        pos[1] = boardHeight+singleCellHeight/2;
-        pos[2] = z;
-
-        // pos[0] = boardMinX;
-        // pos[2] = boardMinZ;
+        pos[0] = boardPosition[0] + x;
+        pos[1] = boardPosition[1] + boardHeight+singleCellHeight/2;
+        pos[2] = boardPosition[2] + z;
 
         // console.log(id, orientation, cellSize, topLeftCell, bottomRightCell);
 
@@ -244,9 +243,9 @@ export const init = async model => {
 
                     const x = boardMinX + scale[0] + j * singleCellWidth;
                     const z = boardMinZ + scale[2] + i * singleCellWidth;
-                    pos[0] = x;
-                    pos[1] = boardHeight+singleCellHeight/2;
-                    pos[2] = z;
+                    pos[0] = boardPosition[0] + x;
+                    pos[1] = boardPosition[1] + boardHeight+singleCellHeight/2;
+                    pos[2] = boardPosition[2] + z;
 
                     obj.identity().move(pos).scale(scale);
 
@@ -299,7 +298,7 @@ export const init = async model => {
     const controlPanelG2 = new G2();
 
     // Move the board to the center of the screen, corresponding to the boardMinX and boardMinZ, X and Z.
-    const board = model.add('cube').color('white').scale(boardWidth/2, boardHeight, boardWidth/2);
+    const board = model.add('cube').color('white').move(boardPosition).scale(boardWidth/2, boardHeight, boardWidth/2);
 
     // Add the board to the scene.
     const controlPanelObj = model.add('square').setTxtr(controlPanelG2.getCanvas());
@@ -322,7 +321,7 @@ export const init = async model => {
 
     model.animate(() => {
         iSubSys.update();
-        controlPanelG2.update(); controlPanelObj.identity().move(-.4,1.7,0).scale(.15);
+        controlPanelG2.update(); controlPanelObj.identity().move(-.4,1.5,0).scale(.15);
         const boardState = server.synchronize('boardState');
         if(boardState.boardGeneration > generation) {
             initNewGeneration(boardState);
