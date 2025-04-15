@@ -141,6 +141,7 @@ export class InteractiveSystem {
         // "Polyfill"
         iObj.name = iObj.name?iObj.name:'Unnamed';
         iObj.pos = iObj.pos?iObj.pos:[0, 0, 0];
+        iObj.detectionRadius = iObj.detectionRadius?iObj.detectionRadius:0.05;
         iObj.dxyz = iObj.dxyz?iObj.dxyz:[0, 0, 0];
         iObj.detectHit = iObj.detectHit?iObj.detectHit:default_hit_detector.bind(iObj);
         iObj.detectGrab = iObj.detectGrab?iObj.detectHit:default_grab_detector.bind(iObj);

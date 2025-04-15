@@ -4,6 +4,42 @@ import * as interactive from "./lib/interactive.js";
 import { buttonState, joyStickState } from "../render/core/controllerInput.js";
 import { rcb, lcb } from '../handle_scenes.js'; 
 
+const cg_ext = {};
+// Implement vector min/max functions
+cg_ext.min = (a, b) => {
+    return [
+        Math.min(a[0], b[0]),
+        Math.min(a[1], b[1]),
+        Math.min(a[2], b[2])
+    ];
+};
+
+cg_ext.max = (a, b) => {
+    return [
+        Math.max(a[0], b[0]),
+        Math.max(a[1], b[1]),
+        Math.max(a[2], b[2])
+    ];
+};
+
+// Line line intersection.
+// y = ax + b
+// y = cx + d
+// a*x + b = cx + d
+// (a-c)x = d-b
+// x = (d-b)/(a-c)
+// y = a*x + b
+// p = [x, y]
+cg_ext.lineLineIntersection2D = (origin1, direction1, origin2, direction2) => { 
+    const a = direction1[1] / direction1[0];
+    const b = origin1[1] - a * origin1[0];
+    const c = direction2[1] / direction2[0];
+    const d = origin2[1] - c * origin2[0];
+    const x = (d-b)/(a-c);
+    const y = a*x + b;
+}
+
+
 // https://www.michaelfogleman.com/rush/
 // The board description is a 36-character string representing the state of the unsolved board. It is a 6x6 2D array in row-major order. The characters in the description follow these simple rules:
 // o empty cell
@@ -95,6 +131,50 @@ const printBoardIn2D = (board) => {
 };
 
 // const interactableObjs = [];
+let controlPanelText = 'Hello world';
+
+const rushHourPositionUpdater = function() {
+    if(this.controllerInteractions.isBeingDragged) {
+        controlPanelText = 'Dragging...';
+        const beamMatrixBegin = this.beamMatrixPositionPairsOnEvent.onDrag[0];
+        const P = this.beamMatrixPositionPairsOnEvent.onDrag[1];
+        let bm = beamMatrixBegin;	// get controller beam matrix
+        let o = bm.slice(12, 15);		// get origin of beam
+        let z = bm.slice( 8, 11);		// get z axis of beam
+        const o_xz = [o[0], o[2]];
+        const z_xz = [z[0], z[2]];
+
+        const beamMatrixNow = this.controllerInteractions.beamMatrix;
+        let bm_n = beamMatrixNow;
+        let o_n = bm_n.slice(12, 15);		// get origin of beam
+        let z_n = bm_n.slice( 8, 11);		// get z axis of beam
+        const o_n_xz = [o_n[0], o_n[2]];
+        const z_n_xz = [z_n[0], z_n[2]];
+
+        controlPanelText = 'Dragging... S1';
+        // const newPos = cg.add(cg.add(cg.add(o_n, x_s), y_s), z_s);
+        // New position based on orientation. And the boundaries of the board.
+        try {
+            if(this.orientation === 'h') {
+                const pos_projected_on_z_axis = [0, this.pos[2]];
+                const horizaontal_line_direction = [1, 0];
+                const old_2d_intersection = cg_ext.lineLineIntersection2D(pos_projected_on_z_axis, horizaontal_line_direction, o_xz, z_xz);
+                const new_2d_intersection = cg_ext.lineLineIntersection2D(pos_projected_on_z_axis, horizaontal_line_direction, o_n_xz, z_n_xz);
+                const new_pos_x = old_2d_intersection[0] + new_2d_intersection[0];
+                this.pos[0] = Math.max(Math.min(new_pos_x, boardMaxX), boardMinX);
+            } else {
+                const pos_projected_on_z_axis = [this.pos[0], 0];
+                const vertical_line_direction = [0, 1];
+                const old_2d_intersection = cg_ext.lineLineIntersection2D(pos_projected_on_z_axis, vertical_line_direction, o_xz, z_xz);
+                const new_2d_intersection = cg_ext.lineLineIntersection2D(pos_projected_on_z_axis, vertical_line_direction, o_n_xz, z_n_xz);
+                const new_pos_z = old_2d_intersection[0] + new_2d_intersection[0];
+                this.pos[2] = Math.max(Math.min(new_pos_z, boardMaxZ), boardMinZ);
+            }
+        } catch (e) {
+            controlPanelText = 'Dragging... Error: \n' + e;
+        }
+    }
+}
 
 export const init = async model => {
     const iSubSys = new interactive.InteractiveSystem(model, buttonState, joyStickState, lcb, rcb);
@@ -162,6 +242,8 @@ export const init = async model => {
             obj: obj,
             pos: pos,
             scale: scale,
+            orientation: orientation,
+            detectionRadius: singleCellHeight/2,
             animate: function() {
                 // console.log(this.pos);
                 // this.obj.move(this.pos[0], this.pos[1], this.pos[2]);
@@ -170,41 +252,7 @@ export const init = async model => {
         }
 
         // Update the position of the car. Based on orientation. And the boundaries of the board.
-        iObj.updatePos = function() {
-            if(this.controllerInteractions.isBeingDragged) {
-                const beamMatrixBegin = this.beamMatrixPositionPairsOnEvent.onDrag[0];
-                const P = this.beamMatrixPositionPairsOnEvent.onDrag[1];
-                let bm = beamMatrixBegin;	// get controller beam matrix
-                let o = bm.slice(12, 15);		// get origin of beam
-                let x = bm.slice( 0, 3);		// get x axis of beam
-                let y = bm.slice( 4, 7);		// get y axis of beam
-                let z = bm.slice( 8, 11);		// get z axis of beam
-                let p = cg.subtract(P, o);	// shift point to be relative to beam origin
-                let dx = cg.dot(p, x);		// compute distance of point projected onto x
-                let dy = cg.dot(p, y);		// compute distance of point projected onto y
-                let dz = cg.dot(p, z);		// compute distance of point projected onto beam
-                
-                const beamMatrixNow = this.controllerInteractions.beamMatrix;
-                let bm_n = beamMatrixNow;
-                let o_n = bm_n.slice(12, 15);		// get origin of beam
-                let x_n = bm_n.slice( 0, 3);		// get x axis of beam
-                let y_n = bm_n.slice( 4, 7);		// get y axis of beam
-                let z_n = bm_n.slice( 8, 11);		// get z axis of beam
-                let x_s = cg.scale(x_n, dx);
-                let y_s = cg.scale(y_n, dy);
-                let z_s = cg.scale(z_n, dz);
-
-                // const newPos = cg.add(cg.add(cg.add(o_n, x_s), y_s), z_s);
-                // New position based on orientation. And the boundaries of the board.
-                if(this.orientation === 'h') {
-                    const newPos = cg.max(cg.min(cg.add(this.pos, x_s), boardMaxX), boardMinX);
-                    this.pos = newPos;
-                } else {
-                    const newPos = cg.max(cg.min(cg.add(this.pos, z_s), boardMaxZ), boardMinZ);
-                    this.pos = newPos;
-                }
-            }
-        }
+        iObj.updatePos = rushHourPositionUpdater.bind(iObj);
 
         return iObj;
     };
@@ -296,6 +344,7 @@ export const init = async model => {
     };
 
     const controlPanelG2 = new G2();
+    
 
     // Move the board to the center of the screen, corresponding to the boardMinX and boardMinZ, X and Z.
     const board = model.add('cube').color('white').move(boardPosition).scale(boardWidth/2, boardHeight, boardWidth/2);
@@ -321,7 +370,7 @@ export const init = async model => {
 
     model.animate(() => {
         iSubSys.update();
-        controlPanelG2.update(); controlPanelObj.identity().move(-.4,1.5,0).scale(.15);
+        controlPanelG2.update(); controlPanelObj.identity().move(-.4,1.5,-0.2).scale(.15);
         const boardState = server.synchronize('boardState');
         if(boardState.boardGeneration > generation) {
             initNewGeneration(boardState);
@@ -360,6 +409,10 @@ export const init = async model => {
         this.setColor('black');
         this.textHeight(.1);
         this.text('Control Panel', 0, .9, 'center');
+
+        this.setColor('black');
+        this.textHeight(.08);
+        this.text(controlPanelText, 0, 0.5, 'center');
     }
  }
  
