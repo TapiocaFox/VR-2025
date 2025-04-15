@@ -68,6 +68,7 @@ export class InteractiveSystem {
         }; 
 
         iObj.destroy = () => {
+            console.log('Destroying object:', iObj);
             const index = this.interactableObjs.indexOf(iObj);
             if (index !== -1) {
                 // Remove from interactable objects list
@@ -75,18 +76,31 @@ export class InteractiveSystem {
                 
                 // Remove from model if it exists
                 if (iObj.obj && this.model) {
+                    console.log('Removing from model:', iObj.obj);
                     this.model.remove(iObj.obj);
                     
                     // Clean up geometries and materials if they exist
-                    if (iObj.obj.geometry) iObj.obj.geometry.dispose();
+                    if (iObj.obj.geometry) {
+                        console.log('Disposing geometry');
+                        iObj.obj.geometry.dispose();
+                    }
                     if (iObj.obj.material) {
+                        console.log('Disposing material');
                         if (Array.isArray(iObj.obj.material)) {
                             iObj.obj.material.forEach(material => material.dispose());
                         } else {
                             iObj.obj.material.dispose();
                         }
                     }
+                    
+                    // Clear any remaining references
+                    iObj.obj = null;
                 }
+                
+                // Clear all other references
+                iObj.controllerInteractions = null;
+                iObj.beamMatrixPositionPairsOnEvent = null;
+                iObj.lastNStates = null;
             }
         };
 

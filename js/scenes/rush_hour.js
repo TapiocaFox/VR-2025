@@ -20,6 +20,18 @@ import { rcb, lcb } from '../handle_scenes.js';
 // 5 ooJFFN
 // 6 oGGoxN
 
+const rush1000Url = '../media/rush/rush1000.txt';
+const response = await fetch(rush1000Url);
+if (!response.ok) {
+   throw new Error(`Response status: ${response.status}`);
+}
+const text = await response.text();
+const boards = text.split('\n');
+// Get a board (a line) from the text. By random.
+const getRandomBoard = () => {
+    return boards[Math.floor(Math.random() * boards.length)];
+};
+
 const boardSize = 6;
 window.boardState = { board : "BBoKMxDDDKMoIAALooIoJLEEooJFFNoGGoxN", carsPositions: {}};   
 server.init('boardState', {});
@@ -116,7 +128,7 @@ export const init = async model => {
         // pos[0] = boardMinX;
         // pos[2] = boardMinZ;
 
-        console.log(id, orientation, cellSize, topLeftCell, bottomRightCell);
+        // console.log(id, orientation, cellSize, topLeftCell, bottomRightCell);
 
         const iObj = {
             name: id,
@@ -170,9 +182,9 @@ export const init = async model => {
         return iObj;
     };
 
-    const newGame = () => {
+    const reset = () => {
         const board = boardState.board;
-        interactableObjs.forEach(obj => obj.destroy());
+        interactableObjs.forEach(iObj => iObj.destroy());
 
         // Build the ICars. Avoid repeating the same cell with same id.
         // Add the ICars using `addInteractableObj`.
@@ -191,7 +203,9 @@ export const init = async model => {
     };
 
     const random = () => {
-
+        boardState.board = getRandomBoard();
+        console.log(boardState.board);
+        reset();
     };
 
     const controlPanelG2 = new G2();
@@ -203,7 +217,7 @@ export const init = async model => {
     // Add the board to the scene.
     const controlPanelObj = model.add('square').setTxtr(controlPanelG2.getCanvas());
     controlPanelG2.addWidget(controlPanelObj, 'button',  .7, -.8, '#80ffff', 'reset', () => {
-        newGame();
+        reset();
     });
 
     controlPanelG2.addWidget(controlPanelObj, 'button',  .3, -.8, '#80ffff', 'undo', () => {
@@ -214,7 +228,7 @@ export const init = async model => {
         random();
     });
 
-    newGame();
+    reset();
 
     model.animate(() => {
         iSubSys.update();
