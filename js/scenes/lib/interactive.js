@@ -15,7 +15,7 @@ export const Controller = Object.freeze({
 });
 
 export class InteractiveSystem {
-    constructor(model, interactableObjs, buttonState, joyStickState, leftControllerBeam, rightControllerBeam) {
+    constructor(model, buttonState, joyStickState, leftControllerBeam, rightControllerBeam) {
         this.model = model;
         this.interactableObjs = [];
         this.buttonState = buttonState;
@@ -40,10 +40,6 @@ export class InteractiveSystem {
             buttonState: buttonState.right,
             joyStickState: joyStickState.right,
         }; 
-
-        interactableObjs.forEach(iObj => {
-            this.addInteractableObj(iObj);
-        });
     }
 
     addInteractableObj(iObj) {
@@ -68,24 +64,26 @@ export class InteractiveSystem {
         }; 
 
         iObj.destroy = () => {
-            console.log('Destroying object:', iObj);
+            // console.log('Destroying object:', iObj);
             const index = this.interactableObjs.indexOf(iObj);
             if (index !== -1) {
+                // console.log('Removeing from interactableObjs');
                 // Remove from interactable objects list
                 this.interactableObjs.splice(index, 1);
                 
+                // console.log('iObj.obj: ', iObj.obj, 'this.model: ', this.model);
                 // Remove from model if it exists
                 if (iObj.obj && this.model) {
-                    console.log('Removing from model:', iObj.obj);
+                    // console.log('Removing from model:', iObj.obj);
                     this.model.remove(iObj.obj);
                     
                     // Clean up geometries and materials if they exist
                     if (iObj.obj.geometry) {
-                        console.log('Disposing geometry');
+                        // console.log('Disposing geometry');
                         iObj.obj.geometry.dispose();
                     }
                     if (iObj.obj.material) {
-                        console.log('Disposing material');
+                        // console.log('Disposing material');
                         if (Array.isArray(iObj.obj.material)) {
                             iObj.obj.material.forEach(material => material.dispose());
                         } else {
@@ -156,6 +154,7 @@ export class InteractiveSystem {
         iObj.onUnGrab = iObj.onUnGrab?iObj.onUnGrab:() => {};
         iObj.onUnHit = iObj.onUnHit?iObj.onUnHit:() => {};
         this.interactableObjs.push(iObj);
+        return iObj;
     }
 
     updateTimestamps() {

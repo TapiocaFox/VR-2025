@@ -20,6 +20,8 @@ import { rcb, lcb } from '../handle_scenes.js';
 // 5 ooJFFN
 // 6 oGGoxN
 
+
+
 const rush1000Url = '../media/rush/rush1000.txt';
 const response = await fetch(rush1000Url);
 if (!response.ok) {
@@ -28,12 +30,23 @@ if (!response.ok) {
 const text = await response.text();
 const boards = text.split('\n');
 // Get a board (a line) from the text. By random.
-const getRandomBoard = () => {
-    return boards[Math.floor(Math.random() * boards.length)];
+// The format is like this:
+// 60 IBBxooIooLDDJAALooJoKEEMFFKooMGGHHHM 2332
+// The database is a simple text file with just a few columns. There is one row for every valid (solvable, minimal) cluster. The columns are: # of moves, board description, and cluster size (# of reachable states).
+const getRandomBoardState = () => {
+    // Return
+    const boardStateList = boards[Math.floor(Math.random() * boards.length)].split(' ');
+    console.log(boardStateList);
+    return {
+        board: boardStateList[1],
+        minMoves: parseInt(boardStateList[0]),
+        clusterSize: parseInt(boardStateList[2]),
+    };
 };
 
+// 58 BBoKMxDDDKMoIAALooIoJLEEooJFFNoGGoxN 9192
 const boardSize = 6;
-window.boardState = { board : "BBoKMxDDDKMoIAALooIoJLEEooJFFNoGGoxN", carsPositions: {}};   
+window.boardState = { board : "BBoKMxDDDKMoIAALooIoJLEEooJFFNoGGoxN", minMoves: 58, clusterSize: 9192, carsPositions: {}};   
 server.init('boardState', {});
 
 const boardWidth = 1.;
@@ -48,26 +61,40 @@ const singleCellWidth = boardWidth / boardSize;
 const singleCellHeight = singleCellWidth;
 
 const idToColor = {
-    "A": [1, 0, 0],
-    "B": [0, 0, 1],
-    "C": [0, 1, 0],
-    "D": [1, 1, 0],
-    "E": [0, 1, 1],
-    "F": [1, 0.5, 0],
-    "G": [0.5, 0, 0],
-    "H": [1, 0, 1],
-    "I": [0.5, 0.5, 0.5],
-    "J": [0, 1, 1],
-    "K": [1, 0, 1],
-    "L": [0, 1, 0],
-    "M": [0.5, 0, 0],
-    "N": [0.5, 0.5, 0],
+    "A": [1, 0, 0.30196078431372547],
+    "B": [0.11372549019607843, 0.16862745098039217, 0.3254901960784314],
+    "C": [0.49019607843137253, 0.1450980392156863, 0.3254901960784314],
+    "D": [0, 0.5294117647058824, 0.3176470588235294],
+    "E": [0.6666666666666666, 0.3215686274509804, 0.20784313725490197],
+    "F": [0.37254901960784315, 0.33725490196078434, 0.3137254901960784],
+    "G": [0.7607843137254902, 0.7647058823529411, 0.7764705882352941],
+    "H": [1, 0.6392156862745098, 0],
+    "I": [1, 0.9215686274509803, 0.14901960784313725],
+    "J": [0, 0.8901960784313725, 0.1803921568627451],
+    "K": [0.1568627450980392, 0.6745098039215687, 1],
+    "L": [0.5137254901960784, 0.4627450980392157, 0.6117647058823529],
+    "M": [1, 0.4666666666666667, 0.6470588235294118],
+    "N": [1, 0.8, 0.6666666666666666],
+    "O": [1, 1, 1],
+    "x": [0, 0, 0],
 }
 
-const interactableObjs = [];
-const iSubSys = new interactive.InteractiveSystem(model, interactableObjs, buttonState, joyStickState, lcb, rcb);
+const printBoardIn2D = (board) => {
+    console.log('Board:');
+    for(let i = 0; i < boardSize; i++) {
+        let row = '';
+        for(let j = 0; j < boardSize; j++) {
+            const cellId = board[i * boardSize + j];
+            row += cellId;
+        }
+        console.log(row);
+    }
+};
+
+// const interactableObjs = [];
 
 export const init = async model => {
+    const iSubSys = new interactive.InteractiveSystem(model, buttonState, joyStickState, lcb, rcb);
     const buildICar = (id, board) => {
         // Determine the top left u, v position of the car from the board state and the id.
         const bottomRightCell = [0, 0]; // Interger 
@@ -81,17 +108,17 @@ export const init = async model => {
             for(let j = 0; j < boardSize; j++) {
                 // Navigate boardState from top left to bottom right.
                 // console.log(board);
-                const cellId = board[i + j * boardSize];
+                const cellId = board[i * boardSize + j];
                 if (cellId === id) {
                     // Bottom left cell found. Highest i and j. Compare to bottomRightCell.
-                    if (i >= bottomRightCell[0] && j >= bottomRightCell[1]) {
-                        bottomRightCell[0] = i;
-                        bottomRightCell[1] = j;
+                    if (j >= bottomRightCell[0] && i >= bottomRightCell[1]) {
+                        bottomRightCell[0] = j;
+                        bottomRightCell[1] = i;
                     }
                     // Top right cell found. Lowest i and j. Compare to topLeftCell.
-                    if (i <= topLeftCell[0] && j <= topLeftCell[1]) {
-                        topLeftCell[0] = i;
-                        topLeftCell[1] = j;
+                    if (j <= topLeftCell[0] && i <= topLeftCell[1]) {
+                        topLeftCell[0] = j;
+                        topLeftCell[1] = i;
                     }
                 }
             }
@@ -182,10 +209,17 @@ export const init = async model => {
         return iObj;
     };
 
-    const reset = () => {
-        const board = boardState.board;
-        interactableObjs.forEach(iObj => iObj.destroy());
 
+    const iCars = [];
+    const iWalls = [];
+    const reset = () => {
+        console.log('Reset');
+        const board = boardState.board;
+        printBoardIn2D(board);
+        iCars.forEach(iCar => iCar.destroy());
+        iWalls.forEach(iWall => iWall.destroy());
+        // interactableObjs.forEach(iObj => iObj.destroy());
+        // iSubSys.addInteractableObj(iObj);
         // Build the ICars. Avoid repeating the same cell with same id.
         // Add the ICars using `addInteractableObj`.
         // Filter out all the unique ids from the board.
@@ -194,16 +228,53 @@ export const init = async model => {
             if(id !== 'o' && id !== 'x') {
                 const iCar = buildICar(id, board);
                 iSubSys.addInteractableObj(iCar);
+                iCars.push(iCar);
             }
         });
+
+        // Build the IWalls.
+        for(let i = 0; i < boardSize; i++) {
+            for(let j = 0; j < boardSize; j++) {
+                const cellId = board[i * boardSize + j];
+                if (cellId === 'x') {
+                    const pos = [0, 0, 0];
+                    const obj = model.add('cube').color(idToColor['x']);
+                    const scale = [singleCellWidth/2, singleCellHeight/2, singleCellWidth/2];
+
+                    const x = boardMinX + scale[0] + j * singleCellWidth;
+                    const z = boardMinZ + scale[2] + i * singleCellWidth;
+                    pos[0] = x;
+                    pos[1] = boardHeight+singleCellHeight/2;
+                    pos[2] = z;
+
+                    obj.identity().move(pos).scale(scale);
+
+                    const iObj = {
+                        name: 'x',
+                        obj: obj,
+                        pos: pos,
+                        animate: function() {
+                            
+                        }
+                    }
+
+                    iSubSys.addInteractableObj(iObj);
+                    iWalls.push(iObj);
+                }
+            }
+        }
     };
 
     const undo = () => {
-
+        console.log('Undo');
     };
 
     const random = () => {
-        boardState.board = getRandomBoard();
+        console.log('Random');
+        const newBoardState = getRandomBoardState();
+        boardState.board = newBoardState.board;
+        boardState.minMoves = newBoardState.minMoves;
+        boardState.clusterSize = newBoardState.clusterSize;
         console.log(boardState.board);
         reset();
     };
