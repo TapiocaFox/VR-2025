@@ -10,63 +10,76 @@ import { rcb, lcb } from '../handle_scenes.js';
 // A primary piece (red car)
 // B - Z all other pieces
 // I used lowercase o instead of periods . for the empty cells in the database so that the entire board description can be selected with a double-click. My code can parse either format.
+// Example for "BBoKMxDDDKMoIAALooIoJLEEooJFFNoGGoxN"
+// Board in 2D row-major order:
+//   123456
+// 1 BBoKMx
+// 2 DDDKMo
+// 3 IAALoo
+// 4 IoJLEE
+// 5 ooJFFN
+// 6 oGGoxN
+
 const boardSize = 6;
 window.boardState = { board : "BBoKMxDDDKMoIAALooIoJLEEooJFFNoGGoxN", carsPositions: {}};   
 server.init('boardState', {});
 
-const boardWidth = 1;
-const boardHeight = 0.33;
+const boardWidth = 1.;
+const boardHeight = 0.1;
 
 const boardMinX = -boardWidth / 2;
 const boardMaxX = boardWidth / 2;
 const boardMinZ = -boardWidth / 2;
 const boardMaxZ = boardWidth / 2;
 
-const cellSize = 1.5 / boardSize;
+const singleCellWidth = boardWidth / boardSize;
+const singleCellHeight = singleCellWidth;
 
 const idToColor = {
-    "A": "red",
-    "B": "blue",
-    "C": "green",
-    "D": "yellow",
-    "E": "purple",
-    "F": "orange",
-    "G": "brown",
-    "H": "pink",
-    "I": "gray",
-    "J": "cyan",
-    "K": "magenta",
-    "L": "lime",
-    "M": "maroon",
+    "A": [1, 0, 0],
+    "B": [0, 0, 1],
+    "C": [0, 1, 0],
+    "D": [1, 1, 0],
+    "E": [0, 1, 1],
+    "F": [1, 0.5, 0],
+    "G": [0.5, 0, 0],
+    "H": [1, 0, 1],
+    "I": [0.5, 0.5, 0.5],
+    "J": [0, 1, 1],
+    "K": [1, 0, 1],
+    "L": [0, 1, 0],
+    "M": [0.5, 0, 0],
+    "N": [0.5, 0.5, 0],
 }
 
 const interactableObjs = [];
 const iSubSys = new interactive.InteractiveSystem(model, interactableObjs, buttonState, joyStickState, lcb, rcb);
 
 export const init = async model => {
-    const buildICar = (id, boardState) => {
+    const buildICar = (id, board) => {
         // Determine the top left u, v position of the car from the board state and the id.
-        const bottomLeftCell = [0, 0]; // Interger 
-        const topRightCell = [0, 0];  // Interger 
-        const orientation = 'h'; // 'h' or 'v'
+        const bottomRightCell = [0, 0]; // Interger 
+        const topLeftCell = [boardSize-1, boardSize-1];  // Interger 
+        let orientation = 'h'; // 'h' or 'v'
         const pos = [0, 0, 0]; // The position of the car on the board.
-        const obj = model.add('square').color(idToColor[id]);
+        const obj = model.add('cube').color(idToColor[id]);
 
         // Find the bottom left and top right cells of the car.
         for(let i = 0; i < boardSize; i++) {
             for(let j = 0; j < boardSize; j++) {
                 // Navigate boardState from top left to bottom right.
-                const cellId = boardState.board[i * boardSize + j];
+                // console.log(board);
+                const cellId = board[i + j * boardSize];
                 if (cellId === id) {
-                    // Bottom left cell found. Lowest i and j. Compare to bottomLeftCell.
-                    if (i < bottomLeftCell[0] && j < bottomLeftCell[1]) {
-                        bottomLeftCell[0] = i;
-                        bottomLeftCell[1] = j;
+                    // Bottom left cell found. Highest i and j. Compare to bottomRightCell.
+                    if (i >= bottomRightCell[0] && j >= bottomRightCell[1]) {
+                        bottomRightCell[0] = i;
+                        bottomRightCell[1] = j;
                     }
-                    // Top right cell found. Highest i and j. Compare to topRightCell.
-                    if (i > topRightCell[0] && j > topRightCell[1]) {
-                        topRightCell[0] = i;
-                        topRightCell[1] = j;
+                    // Top right cell found. Lowest i and j. Compare to topLeftCell.
+                    if (i <= topLeftCell[0] && j <= topLeftCell[1]) {
+                        topLeftCell[0] = i;
+                        topLeftCell[1] = j;
                     }
                 }
             }
@@ -74,32 +87,46 @@ export const init = async model => {
 
         // Determine the cellSize of the car.
         // Car always has 1xN or 1xN size. carLength is the number of N cells in the car.
-        const length = topRightCell[0] - bottomLeftCell[0];
-        const width = topRightCell[1] - bottomLeftCell[1];
+        const length =  bottomRightCell[0] - topLeftCell[0] + 1;
+        const width = bottomRightCell[1] - topLeftCell[1] + 1;
         const cellSize = Math.max(length, width);
+        const scale = [0, 0, 0];
 
         // Determine the orientation of the car.
         if (length > width) {
             orientation = 'h';
-            obj.scale(cellSize, 1, 1);
-        } else {
+            scale[0] = cellSize*singleCellWidth/2;
+            scale[1] = singleCellHeight/2;
+            scale[2] = singleCellWidth/2;
+        } else {    
             orientation = 'v';
-            obj.scale(1, cellSize, 1);
+            scale[0] = singleCellWidth/2;
+            scale[1] = singleCellHeight/2;
+            scale[2] = cellSize*singleCellWidth/2;
         }
 
         // Determine the position of the car. Bounded by the board min and max.
-        const x = boardMinX + bottomLeftCell[1] * cellSize;
-        const z = boardMinV + bottomLeftCell[0] * cellSize;
+        // The original point is the center of the car.
+        const x = boardMinX + scale[0] + topLeftCell[0] * singleCellWidth;
+        const z = boardMinZ + scale[2] + topLeftCell[1] * singleCellWidth;
         pos[0] = x;
-        pos[1] = 0;
+        pos[1] = boardHeight+singleCellHeight/2;
         pos[2] = z;
+
+        // pos[0] = boardMinX;
+        // pos[2] = boardMinZ;
+
+        console.log(id, orientation, cellSize, topLeftCell, bottomRightCell);
 
         const iObj = {
             name: id,
             obj: obj,
             pos: pos,
+            scale: scale,
             animate: function() {
-                this.obj.move(this.pos[0], 0, this.pos[1]);
+                // console.log(this.pos);
+                // this.obj.move(this.pos[0], this.pos[1], this.pos[2]);
+                this.obj.identity().move(this.pos).scale(this.scale);
             }
         }
 
@@ -152,24 +179,45 @@ export const init = async model => {
         // Filter out all the unique ids from the board.
         const uniqueIds = [...new Set(board.split(''))];
         uniqueIds.forEach(id => {
-            if(id !== 'o') {
+            if(id !== 'o' && id !== 'x') {
                 const iCar = buildICar(id, board);
                 iSubSys.addInteractableObj(iCar);
             }
         });
     };
 
+    const undo = () => {
+
+    };
+
+    const random = () => {
+
+    };
+
     const controlPanelG2 = new G2();
 
-    // Move the board to the center of the screen, corresponding to the boardMinU and boardMinV, X and Z.
-    const board = model.add('square').color('white').move(boardMinX, 0, boardMinZ);
-    board.scale(boardWidth, boardHeight, boardWidth);
+    // Move the board to the center of the screen, corresponding to the boardMinX and boardMinZ, X and Z.
+    const board = model.add('cube').color('white').scale(boardWidth/2, boardHeight, boardWidth/2);
 
+
+    // Add the board to the scene.
     const controlPanelObj = model.add('square').setTxtr(controlPanelG2.getCanvas());
+    controlPanelG2.addWidget(controlPanelObj, 'button',  .7, -.8, '#80ffff', 'reset', () => {
+        newGame();
+    });
+
+    controlPanelG2.addWidget(controlPanelObj, 'button',  .3, -.8, '#80ffff', 'undo', () => {
+        undo();
+    });
+
+    controlPanelG2.addWidget(controlPanelObj, 'button',  -.1, -.8, '#80ffff', 'random', () => {
+        random();
+    });
+
     newGame();
 
     model.animate(() => {
-        iSubSys.update();s
+        iSubSys.update();
         controlPanelG2.update(); controlPanelObj.identity().move(-.4,1.7,0).scale(.15);
     });
 

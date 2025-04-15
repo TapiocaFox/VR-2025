@@ -17,7 +17,7 @@ export const Controller = Object.freeze({
 export class InteractiveSystem {
     constructor(model, interactableObjs, buttonState, joyStickState, leftControllerBeam, rightControllerBeam) {
         this.model = model;
-        // this.interactableObjs = interactableObjs;
+        this.interactableObjs = [];
         this.buttonState = buttonState;
 
         this.controllerBeams = {};
