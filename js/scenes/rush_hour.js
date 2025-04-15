@@ -31,12 +31,37 @@ cg_ext.max = (a, b) => {
 // y = a*x + b
 // p = [x, y]
 cg_ext.lineLineIntersection2D = (origin1, direction1, origin2, direction2) => { 
-    const a = direction1[1] / direction1[0];
-    const b = origin1[1] - a * origin1[0];
-    const c = direction2[1] / direction2[0];
-    const d = origin2[1] - c * origin2[0];
-    const x = (d-b)/(a-c);
-    const y = a*x + b;
+    // Handle vertical lines (direction1[0] is 0)
+    if (Math.abs(direction1[0]) < 0.0001) {
+        // Line 1 is vertical, use x from origin1
+        const x = origin1[0];
+        // Find y using line 2's equation
+        const m2 = direction2[1] / direction2[0];
+        const b2 = origin2[1] - m2 * origin2[0];
+        const y = m2 * x + b2;
+        return [x, y];
+    }
+    
+    // Handle horizontal lines (direction2[0] is 0)
+    if (Math.abs(direction2[0]) < 0.0001) {
+        // Line 2 is vertical, use x from origin2
+        const x = origin2[0];
+        // Find y using line 1's equation
+        const m1 = direction1[1] / direction1[0];
+        const b1 = origin1[1] - m1 * origin1[0];
+        const y = m1 * x + b1;
+        return [x, y];
+    }
+
+    // General case for non-vertical lines
+    const m1 = direction1[1] / direction1[0];
+    const b1 = origin1[1] - m1 * origin1[0];
+    const m2 = direction2[1] / direction2[0];
+    const b2 = origin2[1] - m2 * origin2[0];
+    
+    const x = (b2 - b1) / (m1 - m2);
+    const y = m1 * x + b1;
+    return [x, y];
 }
 
 
@@ -151,7 +176,7 @@ const rushHourPositionUpdater = function() {
         const o_n_xz = [o_n[0], o_n[2]];
         const z_n_xz = [z_n[0], z_n[2]];
 
-        controlPanelText = 'Dragging... S1';
+        controlPanelText = 'Dragging... S1, z_n_xz: \n' + z_n_xz.map(x => x.toFixed(3)) +'\n o_n_xz: \n' + o_n_xz.map(x => x.toFixed(3));
         // const newPos = cg.add(cg.add(cg.add(o_n, x_s), y_s), z_s);
         // New position based on orientation. And the boundaries of the board.
         try {
@@ -160,15 +185,16 @@ const rushHourPositionUpdater = function() {
                 const horizaontal_line_direction = [1, 0];
                 const old_2d_intersection = cg_ext.lineLineIntersection2D(pos_projected_on_z_axis, horizaontal_line_direction, o_xz, z_xz);
                 const new_2d_intersection = cg_ext.lineLineIntersection2D(pos_projected_on_z_axis, horizaontal_line_direction, o_n_xz, z_n_xz);
-                const new_pos_x = old_2d_intersection[0] + new_2d_intersection[0];
-                this.pos[0] = Math.max(Math.min(new_pos_x, boardMaxX), boardMinX);
+                this.pos[0] = Math.max(Math.min(new_2d_intersection[0], boardMaxX), boardMinX);
+                controlPanelText = `Horizontal: new_x=${this.pos[0].toFixed(3)}`;
             } else {
-                const pos_projected_on_z_axis = [this.pos[0], 0];
+                const pos_projected_on_x_axis = [this.pos[0], 0];
                 const vertical_line_direction = [0, 1];
-                const old_2d_intersection = cg_ext.lineLineIntersection2D(pos_projected_on_z_axis, vertical_line_direction, o_xz, z_xz);
-                const new_2d_intersection = cg_ext.lineLineIntersection2D(pos_projected_on_z_axis, vertical_line_direction, o_n_xz, z_n_xz);
-                const new_pos_z = old_2d_intersection[0] + new_2d_intersection[0];
-                this.pos[2] = Math.max(Math.min(new_pos_z, boardMaxZ), boardMinZ);
+                const old_2d_intersection = cg_ext.lineLineIntersection2D(pos_projected_on_x_axis, vertical_line_direction, o_xz, z_xz);
+                const new_2d_intersection = cg_ext.lineLineIntersection2D(pos_projected_on_x_axis, vertical_line_direction, o_n_xz, z_n_xz);
+                this.pos[2] = Math.max(Math.min(new_2d_intersection[1], boardMaxZ), boardMinZ);
+                controlPanelText = `Vertical: new_z=${this.pos[2].toFixed(3)}\n` +
+                                 `intersection=[${new_2d_intersection.map(x => x.toFixed(3))}]`;
             }
         } catch (e) {
             controlPanelText = 'Dragging... Error: \n' + e;
