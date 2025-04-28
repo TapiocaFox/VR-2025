@@ -106,10 +106,23 @@ const getRandomBoardState = () => {
     };
 };
 
+const initCarStates = (board) => {
+    const carStates = {};
+    // Get all the unique car ids from the board.
+    const uniqueIds = [...new Set(board.split(''))];
+    uniqueIds.forEach(id => {
+        if(id !== 'o' && id !== 'x') {
+            carStates[id] = {controlledBy: null};
+        }
+    });
+}
 // 58 BBoKMxDDDKMoIAALooIoJLEEooJFFNoGGoxN 9192
 const boardSize = 6;
 let generation = -1;
-server.init('boardState', { board : "BBoKMxDDDKMoIAALooIoJLEEooJFFNoGGoxN", minMoves: 58, clusterSize: 9192, carsPositions: {}, boardGeneration: 0});
+const defaultBoard = "BBoKMxDDDKMoIAALooIoJLEEooJFFNoGGoxN";
+const defaultMinMoves = 58;
+const defaultClusterSize = 9192;
+server.init('boardState', { board : defaultBoard, minMoves: defaultMinMoves, clusterSize: defaultClusterSize, carsStates: initCarStates(defaultBoard), boardGeneration: 0});
 server.init('buttonMessages', {});
 
 const boardWidth = 1.;
@@ -366,6 +379,7 @@ export const init = async model => {
         boardState.board = newBoardState.board;
         boardState.minMoves = newBoardState.minMoves;
         boardState.clusterSize = newBoardState.clusterSize;
+        boardState.carsStates = initCarStates(newBoardState.board);
         server.broadcastGlobal('boardState', boardState);
     };
 
@@ -408,22 +422,20 @@ export const init = async model => {
             generation = boardState.boardGeneration;
             firstInit = true;
         }
-        
-        if (clientID == clients[0]) {
-            // console.log('boardState', boardState);
-            server.sync('buttonMessages', msgs => {
-                let doReset = false;
-                let doUndo = false;
-                let doRandom = false;
+        server.sync('buttonMessages', msgs => {
+            let doReset = false;
+            let doUndo = false;
+            let doRandom = false;
 
-                console.log('msgs', msgs);
-                for (let id in msgs) {
-                    doReset = doReset || msgs[id].reset;
-                    doUndo = doUndo || msgs[id].undo;
-                    doRandom = doRandom || msgs[id].random;
-                }
+            console.log('msgs', msgs);
+            for (let id in msgs) {
+                doReset = doReset || msgs[id].reset;
+                doUndo = doUndo || msgs[id].undo;
+                doRandom = doRandom || msgs[id].random;
+            }
 
-                // Atomic operation.
+            // Atomic operation.
+            if (clientID == clients[0]) {
                 if (doRandom) {
                     random();
                 }
@@ -433,7 +445,10 @@ export const init = async model => {
                 else if (doUndo) {
                     undo();
                 }
-            });
+            }
+        });
+        if (clientID == clients[0]) {
+            // console.log('boardState', boardState);
             server.broadcastGlobal('boardState', boardState);
         }
     });
