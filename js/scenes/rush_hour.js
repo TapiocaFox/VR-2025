@@ -114,7 +114,7 @@ server.init('buttonMessages', {});
 
 const boardWidth = 1.;
 const boardHeight = 0.05;
-const boardPosition = [0, 0.5, 0];
+const boardPosition = [0, 0.05, 0];
 
 const boardMinX = -boardWidth / 2;
 const boardMaxX = boardWidth / 2;
@@ -379,35 +379,44 @@ export const init = async model => {
     const controlPanelObj = model.add('square').setTxtr(controlPanelG2.getCanvas());
     controlPanelG2.addWidget(controlPanelObj, 'button',  .7, -.8, '#80ffff', 'reset', () => {
         // reset();
+        controlPanelText = "Reset Clicked.";
         server.send('buttonMessages', {reset: true});
     });
 
     controlPanelG2.addWidget(controlPanelObj, 'button',  .3, -.8, '#80ffff', 'undo', () => {
         // undo();
+        controlPanelText = "Undo Clicked."; 
         server.send('buttonMessages', {undo: true});
     });
 
     controlPanelG2.addWidget(controlPanelObj, 'button',  -.1, -.8, '#80ffff', 'random', () => {
         // random();
+        controlPanelText = "Random Clicked.";
         server.send('buttonMessages', {random: true});
     });
 
     // reset();
-
+    let firstInit = false;
     model.animate(() => {
         iSubSys.update();
-        controlPanelG2.update(); controlPanelObj.identity().move(-.4,1.5,-0.2).scale(.15);
+        controlPanelG2.update(); controlPanelObj.identity().move(-.4,1.0,-0.2).scale(.15);
         const boardState = server.synchronize('boardState');
-        if(boardState.boardGeneration > generation) {
+        // console.log(boardState.boardGeneration, generation);
+        if(!firstInit || boardState.boardGeneration > generation) {
+            controlPanelText = "New generation: " + boardState.boardGeneration + "\nIs master: " + (clientID == clients[0]);
             initNewGeneration(boardState);
             generation = boardState.boardGeneration;
+            firstInit = true;
         }
         
         if (clientID == clients[0]) {
+            // console.log('boardState', boardState);
             server.sync('buttonMessages', msgs => {
                 let doReset = false;
                 let doUndo = false;
                 let doRandom = false;
+
+                console.log('msgs', msgs);
                 for (let id in msgs) {
                     doReset = doReset || msgs[id].reset;
                     doUndo = doUndo || msgs[id].undo;
@@ -425,6 +434,7 @@ export const init = async model => {
                     undo();
                 }
             });
+            server.broadcastGlobal('boardState', boardState);
         }
     });
 
