@@ -117,6 +117,17 @@ const singleCellHeight = singleCellWidth;
 
 const carEmphasizeScale = 1.2;
 
+const verticalGridDividers = [];
+for(let i = 0; i < boardSize; i++) {
+    verticalGridDividers.push(boardMinX + i * singleCellWidth);
+}
+
+const horizontalGridDividers = [];
+for(let i = 0; i < boardSize; i++) {
+    horizontalGridDividers.push(boardMinZ + i * singleCellWidth);
+}
+
+
 const idToColor = {
     "A": [1, 0, 0.30196078431372547],
     "B": [0.11372549019607843, 0.16862745098039217, 0.3254901960784314],
@@ -202,6 +213,36 @@ const getCarPosAndDimensions = (id, board) => {
     };
 }
 
+const getTopLeftCellAndBottomRightCellFromPos = (pos, orientation, cellSize) => {
+    // Find the top left cell from the pos.
+    const x = pos[0] - boardPosition[0] - boardMinX;
+    const z = pos[2] - boardPosition[2] - boardMinZ;
+    
+    // Calculate the cell indices based on the position
+    // For horizontal cars, we need to account for the scale offset
+    const topLeftCell = [0, 0];
+    if (orientation === 'h') {
+        const cellX = Math.round((x - cellSize * singleCellWidth / 2) / singleCellWidth);
+        const cellZ = Math.round((z - singleCellWidth / 2) / singleCellWidth);
+        topLeftCell[0] = cellX;
+        topLeftCell[1] = cellZ;
+        bottomRightCell[0] = cellX + cellSize - 1;
+        bottomRightCell[1] = cellZ;
+    } else {
+        // For vertical cars
+        const cellX = Math.round((x - singleCellWidth / 2) / singleCellWidth);
+        const cellZ = Math.round((z - cellSize * singleCellWidth / 2) / singleCellWidth);
+        topLeftCell[0] = cellX;
+        topLeftCell[1] = cellZ;
+        bottomRightCell[0] = cellX;
+        bottomRightCell[1] = cellZ + cellSize - 1;
+    }
+
+    return {topLeftCell: topLeftCell, bottomRightCell: bottomRightCell};
+}
+
+
+
 const getRandomBoardState = () => {
     // Return
     const boardStateList = boards[Math.floor(Math.random() * boards.length)].split(' ');
@@ -250,6 +291,14 @@ const printBoardIn2D = (board) => {
         console.log(row);
     }
 };
+
+
+// Test the getTopLeftCellFromPos function.
+printBoardIn2D(defaultBoard);
+const {pos, scale, orientation, cellSize, topLeftCell, bottomRightCell} = getCarPosAndDimensions('F', defaultBoard);
+console.log("topLeftCell: ", topLeftCell, "bottomRightCell: ", bottomRightCell);
+const {topLeftCell: topLeftCell2, bottomRightCell: bottomRightCell2} = getTopLeftCellAndBottomRightCellFromPos(pos, orientation, cellSize);
+console.log("topLeftCell2: ", topLeftCell2, "bottomRightCell2: ", bottomRightCell2);
 
 server.init('boardState', { board : defaultBoard, minMoves: defaultMinMoves, clusterSize: defaultClusterSize, carStates: initCarStates(defaultBoard), boardGeneration: 0});
 server.init('buttonMessages', {});
