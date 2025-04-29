@@ -95,49 +95,13 @@ const boards = text.split('\n');
 // The format is like this:
 // 60 IBBxooIooLDDJAALooJoKEEMFFKooMGGHHHM 2332
 // The database is a simple text file with just a few columns. There is one row for every valid (solvable, minimal) cluster. The columns are: # of moves, board description, and cluster size (# of reachable states).
-const getRandomBoardState = () => {
-    // Return
-    const boardStateList = boards[Math.floor(Math.random() * boards.length)].split(' ');
-    console.log(boardStateList);
-    return {
-        board: boardStateList[1],
-        minMoves: parseInt(boardStateList[0]),
-        clusterSize: parseInt(boardStateList[2]),
-    };
-};
 
-const initCarStates = (board) => {
-    const carStates = {};
-    // Get all the unique car ids from the board.
-    const uniqueIds = [...new Set(board.split(''))];
-    uniqueIds.forEach(id => {
-        if(id !== 'o' && id !== 'x') {
-            carStates[id] = {controlledBy: null, controlledPos: [0, 0, 0]};
-        }
-    });
-    return carStates;
-}
-const cleanUpCarStates = (carStates, clients) => {
-    // Release control of the car if the client is not in the list of clients.
-    for(let id in carStates) {
-        const controlledBy = carStates[id].controlledBy;
-        if(controlledBy != null && !clients.includes(controlledBy)) {
-            carStates[id].controlledBy = null;
-            carStates[id].controlledPos = [0, 0, 0];
-            console.log("Clean up carId: ", id, "controlledBy: ", controlledBy);
-        }
-    }
-    return carStates;
-}
 // 58 BBoKMxDDDKMoIAALooIoJLEEooJFFNoGGoxN 9192
 const boardSize = 6;
 let generation = -1;
 const defaultBoard = "BBoKMxDDDKMoIAALooIoJLEEooJFFNoGGoxN";
 const defaultMinMoves = 58;
 const defaultClusterSize = 9192;
-server.init('boardState', { board : defaultBoard, minMoves: defaultMinMoves, clusterSize: defaultClusterSize, carStates: initCarStates(defaultBoard), boardGeneration: 0});
-server.init('buttonMessages', {});
-server.init('carStateMessages', {});
 
 const boardWidth = 1.;
 const boardHeight = 0.05;
@@ -172,6 +136,109 @@ const idToColor = {
     "x": [0, 0, 0],
 }
 
+const getCarPosAndDimensions = (id, board) => {
+    // Determine the top left u, v position of the car from the board state and the id.
+    const bottomRightCell = [0, 0]; // Interger 
+    const topLeftCell = [boardSize-1, boardSize-1];  // Interger 
+    let orientation = 'h'; // 'h' or 'v'
+    const pos = [0, 0, 0]; // The position of the car on the board.
+
+    // Find the bottom left and top right cells of the car.
+    for(let i = 0; i < boardSize; i++) {
+        for(let j = 0; j < boardSize; j++) {
+            // Navigate boardState from top left to bottom right.
+            // console.log(board);
+            const cellId = board[i * boardSize + j];
+            if (cellId === id) {
+                // Bottom left cell found. Highest i and j. Compare to bottomRightCell.
+                if (j >= bottomRightCell[0] && i >= bottomRightCell[1]) {
+                    bottomRightCell[0] = j;
+                    bottomRightCell[1] = i;
+                }
+                // Top right cell found. Lowest i and j. Compare to topLeftCell.
+                if (j <= topLeftCell[0] && i <= topLeftCell[1]) {
+                    topLeftCell[0] = j;
+                    topLeftCell[1] = i;
+                }
+            }
+        }
+    }
+
+    // Determine the cellSize of the car.
+    // Car always has 1xN or 1xN size. carLength is the number of N cells in the car.
+    const length =  bottomRightCell[0] - topLeftCell[0] + 1;
+    const width = bottomRightCell[1] - topLeftCell[1] + 1;
+    const cellSize = Math.max(length, width);
+    const scale = [0, 0, 0];
+
+    // Determine the orientation of the car.
+    if (length > width) {
+        orientation = 'h';
+        scale[0] = cellSize*singleCellWidth/2;
+        scale[1] = singleCellHeight/2;
+        scale[2] = singleCellWidth/2;
+    } else {    
+        orientation = 'v';
+        scale[0] = singleCellWidth/2;
+        scale[1] = singleCellHeight/2;
+        scale[2] = cellSize*singleCellWidth/2;
+    }
+
+    // Determine the position of the car. Bounded by the board min and max.
+    // The original point is the center of the car.
+    const x = boardMinX + scale[0] + topLeftCell[0] * singleCellWidth;
+    const z = boardMinZ + scale[2] + topLeftCell[1] * singleCellWidth;
+    pos[0] = boardPosition[0] + x;
+    pos[1] = boardPosition[1] + boardHeight+singleCellHeight/2;
+    pos[2] = boardPosition[2] + z;
+
+    return {
+        pos: pos,
+        scale: scale,
+        orientation: orientation,
+        cellSize: cellSize,
+        topLeftCell: topLeftCell,
+        bottomRightCell: bottomRightCell,
+    };
+}
+
+const getRandomBoardState = () => {
+    // Return
+    const boardStateList = boards[Math.floor(Math.random() * boards.length)].split(' ');
+    console.log(boardStateList);
+    return {
+        board: boardStateList[1],
+        minMoves: parseInt(boardStateList[0]),
+        clusterSize: parseInt(boardStateList[2]),
+    };
+};
+
+const initCarStates = (board) => {
+    const carStates = {};
+    // Get all the unique car ids from the board.
+    const uniqueIds = [...new Set(board.split(''))];
+    uniqueIds.forEach(id => {
+        if(id !== 'o' && id !== 'x') {
+            const {pos, orientation, cellSize, topLeftCell, bottomRightCell} = getCarPosAndDimensions(id, board);
+            carStates[id] = {controlledBy: null, controlledPos: pos, orientation: orientation, cellSize: cellSize};
+        }
+    });
+    return carStates;
+}
+const cleanUpCarStates = (carStates, clients) => {
+    // Release control of the car if the client is not in the list of clients.
+    for(let id in carStates) {
+        const controlledBy = carStates[id].controlledBy;
+        if(controlledBy != null && !clients.includes(controlledBy)) {
+            carStates[id].controlledBy = null;
+            carStates[id].controlledPos = [0, 0, 0];
+            console.log("Clean up carId: ", id, "controlledBy: ", controlledBy);
+        }
+    }
+    return carStates;
+}
+
+
 const printBoardIn2D = (board) => {
     console.log('Board:');
     for(let i = 0; i < boardSize; i++) {
@@ -183,6 +250,10 @@ const printBoardIn2D = (board) => {
         console.log(row);
     }
 };
+
+server.init('boardState', { board : defaultBoard, minMoves: defaultMinMoves, clusterSize: defaultClusterSize, carStates: initCarStates(defaultBoard), boardGeneration: 0});
+server.init('buttonMessages', {});
+server.init('carStateMessages', {});
 
 // const interactableObjs = [];
 let controlPanelText = 'Hello world';
@@ -242,61 +313,8 @@ export const init = async model => {
         }
     }
     const buildICar = (id, board) => {
-        // Determine the top left u, v position of the car from the board state and the id.
-        const bottomRightCell = [0, 0]; // Interger 
-        const topLeftCell = [boardSize-1, boardSize-1];  // Interger 
-        let orientation = 'h'; // 'h' or 'v'
-        const pos = [0, 0, 0]; // The position of the car on the board.
+        const {pos, scale, orientation, cellSize, topLeftCell, bottomRightCell} = getCarPosAndDimensions(id, board);
         const obj = model.add('cube').color(idToColor[id]);
-
-        // Find the bottom left and top right cells of the car.
-        for(let i = 0; i < boardSize; i++) {
-            for(let j = 0; j < boardSize; j++) {
-                // Navigate boardState from top left to bottom right.
-                // console.log(board);
-                const cellId = board[i * boardSize + j];
-                if (cellId === id) {
-                    // Bottom left cell found. Highest i and j. Compare to bottomRightCell.
-                    if (j >= bottomRightCell[0] && i >= bottomRightCell[1]) {
-                        bottomRightCell[0] = j;
-                        bottomRightCell[1] = i;
-                    }
-                    // Top right cell found. Lowest i and j. Compare to topLeftCell.
-                    if (j <= topLeftCell[0] && i <= topLeftCell[1]) {
-                        topLeftCell[0] = j;
-                        topLeftCell[1] = i;
-                    }
-                }
-            }
-        }
-
-        // Determine the cellSize of the car.
-        // Car always has 1xN or 1xN size. carLength is the number of N cells in the car.
-        const length =  bottomRightCell[0] - topLeftCell[0] + 1;
-        const width = bottomRightCell[1] - topLeftCell[1] + 1;
-        const cellSize = Math.max(length, width);
-        const scale = [0, 0, 0];
-
-        // Determine the orientation of the car.
-        if (length > width) {
-            orientation = 'h';
-            scale[0] = cellSize*singleCellWidth/2;
-            scale[1] = singleCellHeight/2;
-            scale[2] = singleCellWidth/2;
-        } else {    
-            orientation = 'v';
-            scale[0] = singleCellWidth/2;
-            scale[1] = singleCellHeight/2;
-            scale[2] = cellSize*singleCellWidth/2;
-        }
-
-        // Determine the position of the car. Bounded by the board min and max.
-        // The original point is the center of the car.
-        const x = boardMinX + scale[0] + topLeftCell[0] * singleCellWidth;
-        const z = boardMinZ + scale[2] + topLeftCell[1] * singleCellWidth;
-        pos[0] = boardPosition[0] + x;
-        pos[1] = boardPosition[1] + boardHeight+singleCellHeight/2;
-        pos[2] = boardPosition[2] + z;
 
         // console.log(id, orientation, cellSize, topLeftCell, bottomRightCell);
 
@@ -313,15 +331,15 @@ export const init = async model => {
                 const boardState = iSubSys.boardState;
                 const controlledBy = boardState.carStates[this.name].controlledBy;
                 const controlledPos = boardState.carStates[this.name].controlledPos;
-                this.obj.identity().move(controlledPos).scale(cg.scale(this.scale, carEmphasizeScale));
+                // this.obj.identity().move(controlledPos).scale(cg.scale(this.scale, carEmphasizeScale));
 
-                // if(controlledBy != null) {
-                //     this.obj.identity().move(controlledPos).scale(cg.scale(this.scale, carEmphasizeScale));
-                //     // controlPanelText = 'Controlled by: ' + boardState.carStates[this.name].controlledBy;
-                // }
-                // else {
-                //     this.obj.identity().move(this.pos).scale(this.scale);
-                // }
+                if(controlledBy != null) {
+                    this.obj.identity().move(controlledPos).scale(cg.scale(this.scale, carEmphasizeScale));
+                    // controlPanelText = 'Controlled by: ' + boardState.carStates[this.name].controlledBy;
+                }
+                else {
+                    this.obj.identity().move(this.pos).scale(this.scale);
+                }
             },
             onHit: function(cs) {
                 controlPanelText = 'Hit carId: ' + this.name;
