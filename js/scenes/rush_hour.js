@@ -115,7 +115,8 @@ const boardMaxZ = boardWidth / 2;
 const singleCellWidth = boardWidth / boardSize;
 const singleCellHeight = singleCellWidth;
 
-const carEmphasizeScale = 1.2;
+const carEmphasizeScale = 1.1;
+const carExtraEmphasizeScale = 1.2;
 
 const verticalGridDividers = [];
 for(let i = 0; i < boardSize; i++) {
@@ -279,7 +280,7 @@ const initCarStates = (board) => {
     uniqueIds.forEach(id => {
         if(id !== 'o' && id !== 'x') {
             const {pos, orientation, cellSize, topLeftCell, bottomRightCell} = getCarPosAndDimensions(id, board);
-            carStates[id] = {controlledBy: null, controlledPos: pos, orientation: orientation, cellSize: cellSize};
+            carStates[id] = {controlledBy: null, controlledPos: pos, isGrabbed: false, orientation: orientation, cellSize: cellSize};
         }
     });
     return carStates;
@@ -290,7 +291,7 @@ const cleanUpCarStates = (carStates, clients) => {
         const controlledBy = carStates[id].controlledBy;
         if(controlledBy != null && !clients.includes(controlledBy)) {
             carStates[id].controlledBy = null;
-            carStates[id].controlledPos = [0, 0, 0];
+            carStates[id].isGrabbed = false;
             console.log("Clean up carId: ", id, "controlledBy: ", controlledBy);
         }
     }
@@ -334,7 +335,11 @@ export const init = async model => {
         // console.log("boardState: ", boardState);
         const controlledBy = boardState.carStates[this.name].controlledBy;
         // const controlledPos = boardState.carStates[this.name].controlledPos;
+        this.controlledBy = controlledBy;
+        this.isGrabbed = boardState.carStates[this.name].isGrabbed;
+
         if(controlledBy != clientID) {
+            this.pos = boardState.carStates[this.name].controlledPos;
             return;
         }
         if(this.controllerInteractions.isBeingDragged) {
@@ -380,6 +385,7 @@ export const init = async model => {
             }
         }
     }
+
     const buildICar = (id, board) => {
         const {pos, scale, orientation, cellSize, topLeftCell, bottomRightCell} = getCarPosAndDimensions(id, board);
         const obj = model.add('cube').color(idToColor[id]);
@@ -393,19 +399,24 @@ export const init = async model => {
             scale: scale,
             orientation: orientation,
             detectionRadius: singleCellHeight/2,
+            controlledBy: null,
             animate: function() {
                 // console.log(this.pos);
                 // this.obj.move(this.pos[0], this.pos[1], this.pos[2]);
-                const boardState = iSubSys.boardState;
-                const controlledBy = boardState.carStates[this.name].controlledBy;
-                const controlledPos = boardState.carStates[this.name].controlledPos;
+                // const boardState = iSubSys.boardState;
+                // const controlledBy = boardState.carStates[this.name].controlledBy;
+                // const controlledPos = boardState.carStates[this.name].controlledPos;
                 // this.obj.identity().move(controlledPos).scale(cg.scale(this.scale, carEmphasizeScale));
-
-                if(controlledBy != null) {
-                    this.obj.identity().move(controlledPos).scale(cg.scale(this.scale, carEmphasizeScale));
+                // this.obj.identity().move(controlledPos).scale(cg.scale(this.scale, carEmphasizeScale));
+                if(this.isGrabbed) {
+                    this.obj.identity().move(this.pos).scale(cg.scale(this.scale, carExtraEmphasizeScale));
+                }
+                else if(this.controlledBy != null) {
                     // controlPanelText = 'Controlled by: ' + boardState.carStates[this.name].controlledBy;
+                    this.obj.identity().move(this.pos).scale(cg.scale(this.scale, carEmphasizeScale));
                 }
                 else {
+                    // this.obj.identity().move(this.pos).scale(this.scale);
                     this.obj.identity().move(this.pos).scale(this.scale);
                 }
             },
@@ -416,14 +427,23 @@ export const init = async model => {
                     server.send('carStateMessages', {carId: this.name, controlledBy: clientID, clientID: clientID, controlledPos: this.pos});
                 }
             },
+            onGrab: function(cs) {
+                controlPanelText = 'Grab carId: ' + this.name;
+                if(boardState.carStates[this.name].controlledBy == clientID) {
+                    server.send('carStateMessages', {carId: this.name, controlledBy: clientID, isGrabbed: true, clientID: clientID, controlledPos: this.pos});
+                }
+            },
             onUnGrab: function(cs) {
                 controlPanelText = 'UnGrab carId: ' + this.name;
+                if(boardState.carStates[this.name].controlledBy == clientID) {
+                    server.send('carStateMessages', {carId: this.name, controlledBy: clientID, isGrabbed: false, clientID: clientID, controlledPos: this.pos});
+                }
             },
             onUnHit: function(cs) {
                 controlPanelText = 'UnHit carId: ' + this.name;
                 const boardState = iSubSys.boardState;
                 if(boardState.carStates[this.name].controlledBy == clientID) {
-                    server.send('carStateMessages', {carId: this.name, controlledBy: null, clientID: clientID, controlledPos: [0, 0, 0]});
+                    server.send('carStateMessages', {carId: this.name, controlledBy: null, isGrabbed: false, clientID: clientID, controlledPos: this.pos});
                 }
             }
         }
@@ -578,18 +598,23 @@ export const init = async model => {
                     if(boardState.carStates[carId].controlledBy == null || boardState.carStates[carId].controlledBy == clientID) {
                         boardState.carStates[carId].controlledBy = controlledBy;
                         boardState.carStates[carId].controlledPos = controlledPos;
+                        boardState.carStates[carId].isGrabbed = msgs[id].isGrabbed? true : false;
                         // console.log("carId: ", carId, "controlledBy: ", controlledBy, "clientID: ", clientID, "boardState.carStates[carId]: ", JSON.stringify(boardState.carStates[carId]));
                         // console.log("0. boardState.carStates: ", JSON.stringify(boardState.carStates));
 
                     }
-                    if(boardState.carStates[carId].controlledBy == null) {
-                        const topLeftCell = boardState.carStates[carId].topLeftCell;
-                        const pos = topLeftCellToPos(topLeftCell, boardState.carStates[carId].cellSize, boardState.carStates[carId].orientation);
-                        
-                    }
                 }
                 // console.log("1. boardState.carStates: ", JSON.stringify(boardState.carStates));
-
+                for(let carId in boardState.carStates) {
+                    if(boardState.carStates[carId].controlledBy == null) {
+                        const cellSize = boardState.carStates[carId].cellSize;
+                        const orientation = boardState.carStates[carId].orientation;
+                        const {topLeftCell, bottomRightCell} = getTopLeftCellAndBottomRightCellFromPos(boardState.carStates[carId].controlledPos, orientation, cellSize);
+                        const pos = topLeftCellToPos(topLeftCell, cellSize, orientation);
+                        boardState.carStates[carId].controlledPos = pos;
+                        // console.log("carId: ", carId, "topLeftCell: ", topLeftCell);
+                    }
+                }
                 server.broadcastGlobal('boardState', boardState);
                 // console.log("2.boardState.carStates: ", JSON.stringify(boardState.carStates));
             }
