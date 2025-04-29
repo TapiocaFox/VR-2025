@@ -147,12 +147,34 @@ const idToColor = {
     "x": [0, 0, 0],
 }
 
+const getScaleFromOrientationAndCellSize = (cellSize, orientation) => {
+    const scale = [0, 0, 0];
+    if (orientation === 'h') {
+        scale[0] = cellSize*singleCellWidth/2;
+        scale[1] = singleCellHeight/2;
+        scale[2] = singleCellWidth/2;
+    } else {
+        scale[0] = singleCellWidth/2;
+        scale[1] = singleCellHeight/2;
+        scale[2] = cellSize*singleCellWidth/2;
+    }
+    return scale;
+}
+
+const topLeftCellToPos = (topLeftCell, cellSize, orientation) => {
+    const scale = getScaleFromOrientationAndCellSize(cellSize, orientation);
+    const x = boardMinX + scale[0] + topLeftCell[0] * singleCellWidth;
+    const z = boardMinZ + scale[2] + topLeftCell[1] * singleCellWidth;
+    const pos = [boardPosition[0] + x, boardPosition[1] + boardHeight+singleCellHeight/2, boardPosition[2] + z];
+    return pos;
+}
+
 const getCarPosAndDimensions = (id, board) => {
     // Determine the top left u, v position of the car from the board state and the id.
     const bottomRightCell = [0, 0]; // Interger 
     const topLeftCell = [boardSize-1, boardSize-1];  // Interger 
     let orientation = 'h'; // 'h' or 'v'
-    const pos = [0, 0, 0]; // The position of the car on the board.
+    // const pos = [0, 0, 0]; // The position of the car on the board.
 
     // Find the bottom left and top right cells of the car.
     for(let i = 0; i < boardSize; i++) {
@@ -180,28 +202,16 @@ const getCarPosAndDimensions = (id, board) => {
     const length =  bottomRightCell[0] - topLeftCell[0] + 1;
     const width = bottomRightCell[1] - topLeftCell[1] + 1;
     const cellSize = Math.max(length, width);
-    const scale = [0, 0, 0];
 
     // Determine the orientation of the car.
     if (length > width) {
         orientation = 'h';
-        scale[0] = cellSize*singleCellWidth/2;
-        scale[1] = singleCellHeight/2;
-        scale[2] = singleCellWidth/2;
     } else {    
         orientation = 'v';
-        scale[0] = singleCellWidth/2;
-        scale[1] = singleCellHeight/2;
-        scale[2] = cellSize*singleCellWidth/2;
     }
 
-    // Determine the position of the car. Bounded by the board min and max.
-    // The original point is the center of the car.
-    const x = boardMinX + scale[0] + topLeftCell[0] * singleCellWidth;
-    const z = boardMinZ + scale[2] + topLeftCell[1] * singleCellWidth;
-    pos[0] = boardPosition[0] + x;
-    pos[1] = boardPosition[1] + boardHeight+singleCellHeight/2;
-    pos[2] = boardPosition[2] + z;
+    const scale = getScaleFromOrientationAndCellSize(cellSize, orientation);
+    const pos = topLeftCellToPos(topLeftCell, cellSize, orientation);
 
     return {
         pos: pos,
@@ -241,7 +251,15 @@ const getTopLeftCellAndBottomRightCellFromPos = (pos, orientation, cellSize) => 
     return {topLeftCell: topLeftCell, bottomRightCell: bottomRightCell};
 }
 
-
+const isMoveValid = (board, carId, topLeftCellA, topLeftCellB, orientation, cellSize) => {
+    // Check if the move is valid.
+    // Check if there is a car in the topLeftCellA and topLeftCellB.
+    // If there is a car, check if it is the same car.
+    // If there is no car, check if the move is valid.
+    // If the move is valid, return true.
+    // Otherwise, return false.
+    return true;
+}
 
 const getRandomBoardState = () => {
     // Return
@@ -313,6 +331,7 @@ export const init = async model => {
 
     const rushHourPositionUpdater = function() {
         const boardState = iSubSys.boardState;
+        // console.log("boardState: ", boardState);
         const controlledBy = boardState.carStates[this.name].controlledBy;
         // const controlledPos = boardState.carStates[this.name].controlledPos;
         if(controlledBy != clientID) {
