@@ -6,3 +6,14 @@ node_modules
 key.key
 cert.cer
 *hf_token
+
+# Environment variables
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Large media files
+media/gltf/attic1986_ver2/Image_1-Image_3.png
