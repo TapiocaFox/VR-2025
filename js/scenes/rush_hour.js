@@ -151,6 +151,8 @@ const boardMaxZ = boardWidth / 2;
 const singleCellWidth = boardWidth / boardSize;
 const singleCellHeight = singleCellWidth;
 
+const carEmphasizeScale = 1.2;
+
 const idToColor = {
     "A": [1, 0, 0.30196078431372547],
     "B": [0.11372549019607843, 0.16862745098039217, 0.3254901960784314],
@@ -304,7 +306,7 @@ export const init = async model => {
                 const controlledBy = boardState.carStates[this.name].controlledBy;
                 const controlledPos = boardState.carStates[this.name].controlledPos;
                 if(controlledBy != null) {
-                    this.obj.identity().move(controlledPos).scale(cg.scale(this.scale, 1.1));
+                    this.obj.identity().move(controlledPos).scale(cg.scale(this.scale, carEmphasizeScale));
                     // controlPanelText = 'Controlled by: ' + boardState.carStates[this.name].controlledBy;
                 }
                 else {
@@ -398,6 +400,7 @@ export const init = async model => {
         const boardState = server.synchronize('boardState');
         boardState.boardGeneration++;
         server.broadcastGlobal('boardState', boardState);
+        console.log('Reset Completed.');
     };
 
     // Atomic operation. Undo the last move.
@@ -406,6 +409,7 @@ export const init = async model => {
         const boardState = server.synchronize('boardState');
         boardState.boardGeneration++;
         server.broadcastGlobal('boardState', boardState);
+        console.log('Undo Completed.');
     };
 
     // Atomic operation. Get a random board state and reset the board.
@@ -421,6 +425,7 @@ export const init = async model => {
         boardState.clusterSize = newBoardState.clusterSize;
         boardState.carStates = initCarStates(newBoardState.board);
         server.broadcastGlobal('boardState', boardState);
+        console.log('Random Completed.');
     };
 
     const controlPanelG2 = new G2();
@@ -455,7 +460,6 @@ export const init = async model => {
         controlPanelG2.update(); controlPanelObj.identity().move(-.4,1.0,-0.2).scale(.15);
         const boardState = server.synchronize('boardState');
         iSubSys.boardState = boardState;
-        iSubSys.update();
         // console.log(boardState.boardGeneration, generation);
         if(!firstInit || boardState.boardGeneration > generation) {
             controlPanelText = "New generation: " + boardState.boardGeneration + "\nIs main: " + (clientID == clients[0]);
@@ -463,6 +467,7 @@ export const init = async model => {
             generation = boardState.boardGeneration;
             firstInit = true;
         }
+        iSubSys.update();
         // console.log("boardState.carStates: ", JSON.stringify(boardState.carStates));
 
         server.sync('carStateMessages', msgs => {
