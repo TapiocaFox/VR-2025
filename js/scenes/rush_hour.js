@@ -112,7 +112,7 @@ const initCarStates = (board) => {
     const uniqueIds = [...new Set(board.split(''))];
     uniqueIds.forEach(id => {
         if(id !== 'o' && id !== 'x') {
-            carStates[id] = {controlledBy: null};
+            carStates[id] = {controlledBy: null, controlledPos: [0, 0, 0]};
         }
     });
     return carStates;
@@ -120,8 +120,11 @@ const initCarStates = (board) => {
 const cleanUpCarStates = (carStates, clients) => {
     // Release control of the car if the client is not in the list of clients.
     for(let id in carStates) {
-        if(!clients.includes(id)) {
+        const controlledBy = carStates[id].controlledBy;
+        if(controlledBy != null && !clients.includes(controlledBy)) {
             carStates[id].controlledBy = null;
+            carStates[id].controlledPos = [0, 0, 0];
+            console.log("Clean up carId: ", id, "controlledBy: ", controlledBy);
         }
     }
     return carStates;
@@ -297,25 +300,32 @@ export const init = async model => {
             animate: function() {
                 // console.log(this.pos);
                 // this.obj.move(this.pos[0], this.pos[1], this.pos[2]);
-                if(boardState.carStates[this.name].controlledBy != null) {
-                    this.obj.identity().move(this.pos).scale(this.scale*1.1);
+                const boardState = iSubSys.boardState;
+                const controlledBy = boardState.carStates[this.name].controlledBy;
+                const controlledPos = boardState.carStates[this.name].controlledPos;
+                if(controlledBy != null) {
+                    this.obj.identity().move(controlledPos).scale(cg.scale(this.scale, 1.1));
+                    // controlPanelText = 'Controlled by: ' + boardState.carStates[this.name].controlledBy;
                 }
                 else {
                     this.obj.identity().move(this.pos).scale(this.scale);
                 }
             },
             onHit: function(cs) {
+                controlPanelText = 'Hit carId: ' + this.name;
                 const boardState = iSubSys.boardState;
                 if(boardState.carStates[this.name].controlledBy == null) {
-                    server.send('carStateMessages', {carId: this.name, controlledBy: clientID, clientID: clientID});
+                    server.send('carStateMessages', {carId: this.name, controlledBy: clientID, clientID: clientID, controlledPos: this.pos});
                 }
             },
             onUnGrab: function(cs) {
+                controlPanelText = 'UnGrab carId: ' + this.name;
             },
             onUnHit: function(cs) {
+                controlPanelText = 'UnHit carId: ' + this.name;
                 const boardState = iSubSys.boardState;
                 if(boardState.carStates[this.name].controlledBy == clientID) {
-                    server.send('carStateMessages', {carId: this.name, controlledBy: null, clientID: clientID});
+                    server.send('carStateMessages', {carId: this.name, controlledBy: null, clientID: clientID, controlledPos: [0, 0, 0]});
                 }
             }
         }
@@ -448,22 +458,33 @@ export const init = async model => {
         iSubSys.update();
         // console.log(boardState.boardGeneration, generation);
         if(!firstInit || boardState.boardGeneration > generation) {
-            controlPanelText = "New generation: " + boardState.boardGeneration + "\nIs master: " + (clientID == clients[0]);
+            controlPanelText = "New generation: " + boardState.boardGeneration + "\nIs main: " + (clientID == clients[0]);
             initNewGeneration(boardState);
             generation = boardState.boardGeneration;
             firstInit = true;
         }
+        // console.log("boardState.carStates: ", JSON.stringify(boardState.carStates));
+
         server.sync('carStateMessages', msgs => {
             // Atomic operation.
             if (clientID == clients[0]) {
+                const boardState = server.synchronize('boardState');
                 for (let id in msgs) {
                     const carId = msgs[id].carId;
                     const controlledBy = msgs[id].controlledBy;
-                    if(boardState.carStates[carId].controlledBy == null) {
+                    const controlledPos = msgs[id].controlledPos;
+                    const clientID = msgs[id].clientID;
+                    if(boardState.carStates[carId].controlledBy == null || boardState.carStates[carId].controlledBy == clientID) {
                         boardState.carStates[carId].controlledBy = controlledBy;
+                        boardState.carStates[carId].controlledPos = controlledPos;
+                        console.log("carId: ", carId, "controlledBy: ", controlledBy, "clientID: ", clientID, "boardState.carStates[carId]: ", JSON.stringify(boardState.carStates[carId]));
+                        // console.log("0. boardState.carStates: ", JSON.stringify(boardState.carStates));
                     }
                 }
+                // console.log("1. boardState.carStates: ", JSON.stringify(boardState.carStates));
+
                 server.broadcastGlobal('boardState', boardState);
+                // console.log("2.boardState.carStates: ", JSON.stringify(boardState.carStates));
             }
         });
         server.sync('buttonMessages', msgs => {
