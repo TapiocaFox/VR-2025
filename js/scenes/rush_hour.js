@@ -580,6 +580,12 @@ export const init = async model => {
                         boardState.carStates[carId].controlledPos = controlledPos;
                         // console.log("carId: ", carId, "controlledBy: ", controlledBy, "clientID: ", clientID, "boardState.carStates[carId]: ", JSON.stringify(boardState.carStates[carId]));
                         // console.log("0. boardState.carStates: ", JSON.stringify(boardState.carStates));
+
+                    }
+                    if(boardState.carStates[carId].controlledBy == null) {
+                        const topLeftCell = boardState.carStates[carId].topLeftCell;
+                        const pos = topLeftCellToPos(topLeftCell, boardState.carStates[carId].cellSize, boardState.carStates[carId].orientation);
+                        
                     }
                 }
                 // console.log("1. boardState.carStates: ", JSON.stringify(boardState.carStates));
