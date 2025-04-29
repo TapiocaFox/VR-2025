@@ -233,16 +233,16 @@ const getTopLeftCellAndBottomRightCellFromPos = (pos, orientation, cellSize) => 
     // For horizontal cars, we need to account for the scale offset
     const topLeftCell = [0, 0];
     if (orientation === 'h') {
-        const cellX = Math.round((x - cellSize * singleCellWidth / 2) / singleCellWidth);
-        const cellZ = Math.round((z - singleCellWidth / 2) / singleCellWidth);
+        const cellX = Math.max(0, Math.min(Math.round((x - cellSize * singleCellWidth / 2) / singleCellWidth), boardSize-cellSize));
+        const cellZ = Math.max(0, Math.min(Math.round((z - singleCellWidth / 2) / singleCellWidth), boardSize-1));
         topLeftCell[0] = cellX;
         topLeftCell[1] = cellZ;
         bottomRightCell[0] = cellX + cellSize - 1;
         bottomRightCell[1] = cellZ;
     } else {
         // For vertical cars
-        const cellX = Math.round((x - singleCellWidth / 2) / singleCellWidth);
-        const cellZ = Math.round((z - cellSize * singleCellWidth / 2) / singleCellWidth);
+        const cellX = Math.max(0, Math.min(Math.round((x - singleCellWidth / 2) / singleCellWidth), boardSize-1));
+        const cellZ = Math.max(0, Math.min(Math.round((z - cellSize * singleCellWidth / 2) / singleCellWidth), boardSize-cellSize));
         topLeftCell[0] = cellX;
         topLeftCell[1] = cellZ;
         bottomRightCell[0] = cellX;
