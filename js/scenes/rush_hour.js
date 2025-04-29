@@ -334,9 +334,10 @@ export const init = async model => {
         const boardState = iSubSys.boardState;
         // console.log("boardState: ", boardState);
         const controlledBy = boardState.carStates[this.name].controlledBy;
+        const isGrabbed = boardState.carStates[this.name].isGrabbed;
         // const controlledPos = boardState.carStates[this.name].controlledPos;
         this.controlledBy = controlledBy;
-        this.isGrabbed = boardState.carStates[this.name].isGrabbed;
+        this.isGrabbed = isGrabbed; 
 
         if(controlledBy != clientID) {
             this.pos = boardState.carStates[this.name].controlledPos;
@@ -379,7 +380,7 @@ export const init = async model => {
                     controlPanelText = `Vertical: new_z=${this.pos[2].toFixed(3)}\n` +
                                     `intersection=[${new_2d_intersection.map(x => x.toFixed(3))}]`;
                 }
-                server.send('carStateMessages', {carId: this.name, controlledBy: clientID, clientID: clientID, controlledPos: this.pos});
+                server.send('carStateMessages', {carId: this.name, controlledBy: clientID, sendFrom: clientID, controlledPos: this.pos});
             } catch (e) {
                 controlPanelText = 'Dragging... Error: \n' + e;
             }
@@ -424,26 +425,26 @@ export const init = async model => {
                 controlPanelText = 'Hit carId: ' + this.name;
                 const boardState = iSubSys.boardState;
                 if(boardState.carStates[this.name].controlledBy == null) {
-                    server.send('carStateMessages', {carId: this.name, controlledBy: clientID, clientID: clientID, controlledPos: this.pos});
+                    server.send('carStateMessages', {carId: this.name, controlledBy: clientID, sendFrom: clientID, controlledPos: this.pos});
                 }
             },
             onGrab: function(cs) {
                 controlPanelText = 'Grab carId: ' + this.name;
                 if(boardState.carStates[this.name].controlledBy == clientID) {
-                    server.send('carStateMessages', {carId: this.name, controlledBy: clientID, isGrabbed: true, clientID: clientID, controlledPos: this.pos});
+                    server.send('carStateMessages', {carId: this.name, controlledBy: clientID, isGrabbed: true, sendFrom: clientID, controlledPos: this.pos});
                 }
             },
             onUnGrab: function(cs) {
                 controlPanelText = 'UnGrab carId: ' + this.name;
                 if(boardState.carStates[this.name].controlledBy == clientID) {
-                    server.send('carStateMessages', {carId: this.name, controlledBy: clientID, isGrabbed: false, clientID: clientID, controlledPos: this.pos});
+                    server.send('carStateMessages', {carId: this.name, controlledBy: clientID, isGrabbed: false, sendFrom: clientID, controlledPos: this.pos});
                 }
             },
             onUnHit: function(cs) {
                 controlPanelText = 'UnHit carId: ' + this.name;
                 const boardState = iSubSys.boardState;
                 if(boardState.carStates[this.name].controlledBy == clientID) {
-                    server.send('carStateMessages', {carId: this.name, controlledBy: null, isGrabbed: false, clientID: clientID, controlledPos: this.pos});
+                    server.send('carStateMessages', {carId: this.name, controlledBy: null, isGrabbed: false, sendFrom: clientID, controlledPos: this.pos});
                 }
             }
         }
@@ -594,11 +595,12 @@ export const init = async model => {
                     const carId = msgs[id].carId;
                     const controlledBy = msgs[id].controlledBy;
                     const controlledPos = msgs[id].controlledPos;
-                    const clientID = msgs[id].clientID;
-                    if(boardState.carStates[carId].controlledBy == null || boardState.carStates[carId].controlledBy == clientID) {
+                    const sendFrom = msgs[id].sendFrom;
+                    const isGrabbed = msgs[id].isGrabbed;
+                    if(boardState.carStates[carId].controlledBy == null || boardState.carStates[carId].controlledBy == sendFrom) {
                         boardState.carStates[carId].controlledBy = controlledBy;
                         boardState.carStates[carId].controlledPos = controlledPos;
-                        boardState.carStates[carId].isGrabbed = msgs[id].isGrabbed? true : false;
+                        if(typeof isGrabbed === 'boolean') boardState.carStates[carId].isGrabbed = isGrabbed;
                         // console.log("carId: ", carId, "controlledBy: ", controlledBy, "clientID: ", clientID, "boardState.carStates[carId]: ", JSON.stringify(boardState.carStates[carId]));
                         // console.log("0. boardState.carStates: ", JSON.stringify(boardState.carStates));
 
