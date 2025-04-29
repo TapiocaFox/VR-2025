@@ -100,6 +100,12 @@ export class InteractiveSystem {
                 iObj.controllerInteractions = null;
                 iObj.beamMatrixPositionPairsOnEvent = null;
                 iObj.lastNStates = null;
+
+                for (const [_not_real_key, key] of Object.entries(Controller)) {
+                    if(this.controllerStates[key].interactingWithIObj == iObj) {
+                        this.controllerStates[key].interactingWithIObj = null;
+                    }
+                }
             }
         };
 
