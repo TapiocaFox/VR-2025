@@ -360,21 +360,21 @@ export const init = async model => {
             const o_n_xz = [o_n[0], o_n[2]];
             const z_n_xz = [z_n[0], z_n[2]];
 
-            controlPanelText = 'Dragging... S1, z_n_xz: \n' + z_n_xz.map(x => x.toFixed(3)) +'\n o_n_xz: \n' + o_n_xz.map(x => x.toFixed(3));
+            // controlPanelText = 'Dragging... S1, z_n_xz: \n' + z_n_xz.map(x => x.toFixed(3)) +'\n o_n_xz: \n' + o_n_xz.map(x => x.toFixed(3));
             // const newPos = cg.add(cg.add(cg.add(o_n, x_s), y_s), z_s);
             // New position based on orientation. And the boundaries of the board.
             try {
                 if(this.orientation === 'h') {
                     const pos_projected_on_z_axis = [0, this.pos[2]];
                     const horizaontal_line_direction = [1, 0];
-                    const old_2d_intersection = cg_ext.lineLineIntersection2D(pos_projected_on_z_axis, horizaontal_line_direction, o_xz, z_xz);
+                    // const old_2d_intersection = cg_ext.lineLineIntersection2D(pos_projected_on_z_axis, horizaontal_line_direction, o_xz, z_xz);
                     const new_2d_intersection = cg_ext.lineLineIntersection2D(pos_projected_on_z_axis, horizaontal_line_direction, o_n_xz, z_n_xz);
                     this.pos[0] = Math.max(Math.min(new_2d_intersection[0], boardMaxX), boardMinX);
                     controlPanelText = `Horizontal: new_x=${this.pos[0].toFixed(3)}`;
                 } else {
                     const pos_projected_on_x_axis = [this.pos[0], 0];
                     const vertical_line_direction = [0, 1];
-                    const old_2d_intersection = cg_ext.lineLineIntersection2D(pos_projected_on_x_axis, vertical_line_direction, o_xz, z_xz);
+                    // const old_2d_intersection = cg_ext.lineLineIntersection2D(pos_projected_on_x_axis, vertical_line_direction, o_xz, z_xz);
                     const new_2d_intersection = cg_ext.lineLineIntersection2D(pos_projected_on_x_axis, vertical_line_direction, o_n_xz, z_n_xz);
                     this.pos[2] = Math.max(Math.min(new_2d_intersection[1], boardMaxZ), boardMinZ);
                     controlPanelText = `Vertical: new_z=${this.pos[2].toFixed(3)}\n` +
@@ -579,7 +579,7 @@ export const init = async model => {
         iSubSys.boardState = boardState;
         // console.log(boardState.boardGeneration, generation);
         if(!firstInit || boardState.boardGeneration > generation) {
-            controlPanelText = "New generation: " + boardState.boardGeneration + "\nIs main: " + (clientID == clients[0]);
+            controlPanelText = "New generation: " + boardState.boardGeneration + "\nclientID: " + clientID + ", Is main: " + (clientID == clients[0]);
             initNewGeneration(boardState);
             generation = boardState.boardGeneration;
             firstInit = true;
