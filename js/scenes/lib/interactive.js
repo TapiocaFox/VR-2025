@@ -25,6 +25,7 @@ export class InteractiveSystem {
         this.controllerBeams[Controller.Left] = leftControllerBeam;
         this.controllerBeams[Controller.Right] = rightControllerBeam;
 
+
         this.controllerStates = {};
         this.controllerStates[Controller.Left] = {
             controller: Controller.Left,

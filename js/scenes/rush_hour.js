@@ -115,6 +115,16 @@ const initCarStates = (board) => {
             carStates[id] = {controlledBy: null};
         }
     });
+    return carStates;
+}
+const cleanUpCarStates = (carStates, clients) => {
+    // Release control of the car if the client is not in the list of clients.
+    for(let id in carStates) {
+        if(!clients.includes(id)) {
+            carStates[id].controlledBy = null;
+        }
+    }
+    return carStates;
 }
 // 58 BBoKMxDDDKMoIAALooIoJLEEooJFFNoGGoxN 9192
 const boardSize = 6;
@@ -122,8 +132,9 @@ let generation = -1;
 const defaultBoard = "BBoKMxDDDKMoIAALooIoJLEEooJFFNoGGoxN";
 const defaultMinMoves = 58;
 const defaultClusterSize = 9192;
-server.init('boardState', { board : defaultBoard, minMoves: defaultMinMoves, clusterSize: defaultClusterSize, carsStates: initCarStates(defaultBoard), boardGeneration: 0});
+server.init('boardState', { board : defaultBoard, minMoves: defaultMinMoves, clusterSize: defaultClusterSize, carStates: initCarStates(defaultBoard), boardGeneration: 0});
 server.init('buttonMessages', {});
+server.init('carStateMessages', {});
 
 const boardWidth = 1.;
 const boardHeight = 0.05;
@@ -286,7 +297,26 @@ export const init = async model => {
             animate: function() {
                 // console.log(this.pos);
                 // this.obj.move(this.pos[0], this.pos[1], this.pos[2]);
-                this.obj.identity().move(this.pos).scale(this.scale);
+                if(boardState.carStates[this.name].controlledBy != null) {
+                    this.obj.identity().move(this.pos).scale(this.scale*1.1);
+                }
+                else {
+                    this.obj.identity().move(this.pos).scale(this.scale);
+                }
+            },
+            onHit: function(cs) {
+                const boardState = iSubSys.boardState;
+                if(boardState.carStates[this.name].controlledBy == null) {
+                    server.send('carStateMessages', {carId: this.name, controlledBy: clientID, clientID: clientID});
+                }
+            },
+            onUnGrab: function(cs) {
+            },
+            onUnHit: function(cs) {
+                const boardState = iSubSys.boardState;
+                if(boardState.carStates[this.name].controlledBy == clientID) {
+                    server.send('carStateMessages', {carId: this.name, controlledBy: null, clientID: clientID});
+                }
             }
         }
 
@@ -379,7 +409,7 @@ export const init = async model => {
         boardState.board = newBoardState.board;
         boardState.minMoves = newBoardState.minMoves;
         boardState.clusterSize = newBoardState.clusterSize;
-        boardState.carsStates = initCarStates(newBoardState.board);
+        boardState.carStates = initCarStates(newBoardState.board);
         server.broadcastGlobal('boardState', boardState);
     };
 
@@ -412,9 +442,10 @@ export const init = async model => {
     // reset();
     let firstInit = false;
     model.animate(() => {
-        iSubSys.update();
         controlPanelG2.update(); controlPanelObj.identity().move(-.4,1.0,-0.2).scale(.15);
         const boardState = server.synchronize('boardState');
+        iSubSys.boardState = boardState;
+        iSubSys.update();
         // console.log(boardState.boardGeneration, generation);
         if(!firstInit || boardState.boardGeneration > generation) {
             controlPanelText = "New generation: " + boardState.boardGeneration + "\nIs master: " + (clientID == clients[0]);
@@ -422,20 +453,32 @@ export const init = async model => {
             generation = boardState.boardGeneration;
             firstInit = true;
         }
-        server.sync('buttonMessages', msgs => {
-            let doReset = false;
-            let doUndo = false;
-            let doRandom = false;
-
-            console.log('msgs', msgs);
-            for (let id in msgs) {
-                doReset = doReset || msgs[id].reset;
-                doUndo = doUndo || msgs[id].undo;
-                doRandom = doRandom || msgs[id].random;
-            }
-
+        server.sync('carStateMessages', msgs => {
             // Atomic operation.
             if (clientID == clients[0]) {
+                for (let id in msgs) {
+                    const carId = msgs[id].carId;
+                    const controlledBy = msgs[id].controlledBy;
+                    if(boardState.carStates[carId].controlledBy == null) {
+                        boardState.carStates[carId].controlledBy = controlledBy;
+                    }
+                }
+                server.broadcastGlobal('boardState', boardState);
+            }
+        });
+        server.sync('buttonMessages', msgs => {
+            // Atomic operation.
+            if (clientID == clients[0]) {
+                let doReset = false;
+                let doUndo = false;
+                let doRandom = false;
+    
+                // console.log('msgs', msgs);
+                for (let id in msgs) {
+                    doReset = doReset || msgs[id].reset;
+                    doUndo = doUndo || msgs[id].undo;
+                    doRandom = doRandom || msgs[id].random;
+                }
                 if (doRandom) {
                     random();
                 }
@@ -449,6 +492,7 @@ export const init = async model => {
         });
         if (clientID == clients[0]) {
             // console.log('boardState', boardState);
+            boardState.carStates = cleanUpCarStates(boardState.carStates, clients);
             server.broadcastGlobal('boardState', boardState);
         }
     });
