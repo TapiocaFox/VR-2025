@@ -187,52 +187,60 @@ const printBoardIn2D = (board) => {
 // const interactableObjs = [];
 let controlPanelText = 'Hello world';
 
-const rushHourPositionUpdater = function() {
-    if(this.controllerInteractions.isBeingDragged) {
-        controlPanelText = 'Dragging...';
-        const beamMatrixBegin = this.beamMatrixPositionPairsOnEvent.onDrag[0];
-        const P = this.beamMatrixPositionPairsOnEvent.onDrag[1];
-        let bm = beamMatrixBegin;	// get controller beam matrix
-        let o = bm.slice(12, 15);		// get origin of beam
-        let z = bm.slice( 8, 11);		// get z axis of beam
-        const o_xz = [o[0], o[2]];
-        const z_xz = [z[0], z[2]];
-
-        const beamMatrixNow = this.controllerInteractions.beamMatrix;
-        let bm_n = beamMatrixNow;
-        let o_n = bm_n.slice(12, 15);		// get origin of beam
-        let z_n = bm_n.slice( 8, 11);		// get z axis of beam
-        const o_n_xz = [o_n[0], o_n[2]];
-        const z_n_xz = [z_n[0], z_n[2]];
-
-        controlPanelText = 'Dragging... S1, z_n_xz: \n' + z_n_xz.map(x => x.toFixed(3)) +'\n o_n_xz: \n' + o_n_xz.map(x => x.toFixed(3));
-        // const newPos = cg.add(cg.add(cg.add(o_n, x_s), y_s), z_s);
-        // New position based on orientation. And the boundaries of the board.
-        try {
-            if(this.orientation === 'h') {
-                const pos_projected_on_z_axis = [0, this.pos[2]];
-                const horizaontal_line_direction = [1, 0];
-                const old_2d_intersection = cg_ext.lineLineIntersection2D(pos_projected_on_z_axis, horizaontal_line_direction, o_xz, z_xz);
-                const new_2d_intersection = cg_ext.lineLineIntersection2D(pos_projected_on_z_axis, horizaontal_line_direction, o_n_xz, z_n_xz);
-                this.pos[0] = Math.max(Math.min(new_2d_intersection[0], boardMaxX), boardMinX);
-                controlPanelText = `Horizontal: new_x=${this.pos[0].toFixed(3)}`;
-            } else {
-                const pos_projected_on_x_axis = [this.pos[0], 0];
-                const vertical_line_direction = [0, 1];
-                const old_2d_intersection = cg_ext.lineLineIntersection2D(pos_projected_on_x_axis, vertical_line_direction, o_xz, z_xz);
-                const new_2d_intersection = cg_ext.lineLineIntersection2D(pos_projected_on_x_axis, vertical_line_direction, o_n_xz, z_n_xz);
-                this.pos[2] = Math.max(Math.min(new_2d_intersection[1], boardMaxZ), boardMinZ);
-                controlPanelText = `Vertical: new_z=${this.pos[2].toFixed(3)}\n` +
-                                 `intersection=[${new_2d_intersection.map(x => x.toFixed(3))}]`;
-            }
-        } catch (e) {
-            controlPanelText = 'Dragging... Error: \n' + e;
-        }
-    }
-}
 
 export const init = async model => {
     const iSubSys = new interactive.InteractiveSystem(model, buttonState, joyStickState, lcb, rcb);
+
+    const rushHourPositionUpdater = function() {
+        const boardState = iSubSys.boardState;
+        const controlledBy = boardState.carStates[this.name].controlledBy;
+        // const controlledPos = boardState.carStates[this.name].controlledPos;
+        if(controlledBy != clientID) {
+            return;
+        }
+        if(this.controllerInteractions.isBeingDragged) {
+            controlPanelText = 'Dragging...';
+            const beamMatrixBegin = this.beamMatrixPositionPairsOnEvent.onDrag[0];
+            const P = this.beamMatrixPositionPairsOnEvent.onDrag[1];
+            let bm = beamMatrixBegin;	// get controller beam matrix
+            let o = bm.slice(12, 15);		// get origin of beam
+            let z = bm.slice( 8, 11);		// get z axis of beam
+            const o_xz = [o[0], o[2]];
+            const z_xz = [z[0], z[2]];
+
+            const beamMatrixNow = this.controllerInteractions.beamMatrix;
+            let bm_n = beamMatrixNow;
+            let o_n = bm_n.slice(12, 15);		// get origin of beam
+            let z_n = bm_n.slice( 8, 11);		// get z axis of beam
+            const o_n_xz = [o_n[0], o_n[2]];
+            const z_n_xz = [z_n[0], z_n[2]];
+
+            controlPanelText = 'Dragging... S1, z_n_xz: \n' + z_n_xz.map(x => x.toFixed(3)) +'\n o_n_xz: \n' + o_n_xz.map(x => x.toFixed(3));
+            // const newPos = cg.add(cg.add(cg.add(o_n, x_s), y_s), z_s);
+            // New position based on orientation. And the boundaries of the board.
+            try {
+                if(this.orientation === 'h') {
+                    const pos_projected_on_z_axis = [0, this.pos[2]];
+                    const horizaontal_line_direction = [1, 0];
+                    const old_2d_intersection = cg_ext.lineLineIntersection2D(pos_projected_on_z_axis, horizaontal_line_direction, o_xz, z_xz);
+                    const new_2d_intersection = cg_ext.lineLineIntersection2D(pos_projected_on_z_axis, horizaontal_line_direction, o_n_xz, z_n_xz);
+                    this.pos[0] = Math.max(Math.min(new_2d_intersection[0], boardMaxX), boardMinX);
+                    controlPanelText = `Horizontal: new_x=${this.pos[0].toFixed(3)}`;
+                } else {
+                    const pos_projected_on_x_axis = [this.pos[0], 0];
+                    const vertical_line_direction = [0, 1];
+                    const old_2d_intersection = cg_ext.lineLineIntersection2D(pos_projected_on_x_axis, vertical_line_direction, o_xz, z_xz);
+                    const new_2d_intersection = cg_ext.lineLineIntersection2D(pos_projected_on_x_axis, vertical_line_direction, o_n_xz, z_n_xz);
+                    this.pos[2] = Math.max(Math.min(new_2d_intersection[1], boardMaxZ), boardMinZ);
+                    controlPanelText = `Vertical: new_z=${this.pos[2].toFixed(3)}\n` +
+                                    `intersection=[${new_2d_intersection.map(x => x.toFixed(3))}]`;
+                }
+                server.send('carStateMessages', {carId: this.name, controlledBy: clientID, clientID: clientID, controlledPos: this.pos});
+            } catch (e) {
+                controlPanelText = 'Dragging... Error: \n' + e;
+            }
+        }
+    }
     const buildICar = (id, board) => {
         // Determine the top left u, v position of the car from the board state and the id.
         const bottomRightCell = [0, 0]; // Interger 
@@ -305,13 +313,15 @@ export const init = async model => {
                 const boardState = iSubSys.boardState;
                 const controlledBy = boardState.carStates[this.name].controlledBy;
                 const controlledPos = boardState.carStates[this.name].controlledPos;
-                if(controlledBy != null) {
-                    this.obj.identity().move(controlledPos).scale(cg.scale(this.scale, carEmphasizeScale));
-                    // controlPanelText = 'Controlled by: ' + boardState.carStates[this.name].controlledBy;
-                }
-                else {
-                    this.obj.identity().move(this.pos).scale(this.scale);
-                }
+                this.obj.identity().move(controlledPos).scale(cg.scale(this.scale, carEmphasizeScale));
+
+                // if(controlledBy != null) {
+                //     this.obj.identity().move(controlledPos).scale(cg.scale(this.scale, carEmphasizeScale));
+                //     // controlPanelText = 'Controlled by: ' + boardState.carStates[this.name].controlledBy;
+                // }
+                // else {
+                //     this.obj.identity().move(this.pos).scale(this.scale);
+                // }
             },
             onHit: function(cs) {
                 controlPanelText = 'Hit carId: ' + this.name;
@@ -482,7 +492,7 @@ export const init = async model => {
                     if(boardState.carStates[carId].controlledBy == null || boardState.carStates[carId].controlledBy == clientID) {
                         boardState.carStates[carId].controlledBy = controlledBy;
                         boardState.carStates[carId].controlledPos = controlledPos;
-                        console.log("carId: ", carId, "controlledBy: ", controlledBy, "clientID: ", clientID, "boardState.carStates[carId]: ", JSON.stringify(boardState.carStates[carId]));
+                        // console.log("carId: ", carId, "controlledBy: ", controlledBy, "clientID: ", clientID, "boardState.carStates[carId]: ", JSON.stringify(boardState.carStates[carId]));
                         // console.log("0. boardState.carStates: ", JSON.stringify(boardState.carStates));
                     }
                 }
