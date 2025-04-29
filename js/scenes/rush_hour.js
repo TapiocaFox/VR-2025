@@ -105,7 +105,7 @@ const defaultClusterSize = 9192;
 
 const boardWidth = 1.;
 const boardHeight = 0.05;
-const boardPosition = [0, 0.05, 0];
+const boardPosition = [0, 0.00, 0];
 
 const boardMinX = -boardWidth / 2;
 const boardMaxX = boardWidth / 2;
