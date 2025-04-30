@@ -211,12 +211,12 @@ const getCarPosAndDimensions = (id, board) => {
         orientation = 'v';
     }
 
-    const scale = getScaleFromOrientationAndCellSize(cellSize, orientation);
-    const pos = topLeftCellToPos(topLeftCell, cellSize, orientation);
+    // const scale = getScaleFromOrientationAndCellSize(cellSize, orientation);
+    // const pos = topLeftCellToPos(topLeftCell, cellSize, orientation);
 
     return {
-        pos: pos,
-        scale: scale,
+        // pos: pos,
+        // scale: scale,
         orientation: orientation,
         cellSize: cellSize,
         topLeftCell: topLeftCell,
@@ -279,8 +279,10 @@ const initCarStates = (board) => {
     const uniqueIds = [...new Set(board.split(''))];
     uniqueIds.forEach(id => {
         if(id !== 'o' && id !== 'x') {
-            const {pos, orientation, cellSize, topLeftCell, bottomRightCell} = getCarPosAndDimensions(id, board);
-            carStates[id] = {controlledBy: null, controlledPos: pos, isGrabbed: false, orientation: orientation, cellSize: cellSize};
+            const {orientation, cellSize, topLeftCell, bottomRightCell} = getCarPosAndDimensions(id, board);
+            const pos = topLeftCellToPos(topLeftCell, cellSize, orientation);
+            const scale = getScaleFromOrientationAndCellSize(cellSize, orientation);
+            carStates[id] = {controlledBy: null, controlledPos: pos, isGrabbed: false, orientation: orientation, cellSize: cellSize, scale: scale};
         }
     });
     return carStates;
@@ -315,9 +317,9 @@ const printBoardIn2D = (board) => {
 
 // Test the getTopLeftCellFromPos function.
 printBoardIn2D(defaultBoard);
-const {pos, scale, orientation, cellSize, topLeftCell, bottomRightCell} = getCarPosAndDimensions('F', defaultBoard);
+const {orientation, cellSize, topLeftCell, bottomRightCell} = getCarPosAndDimensions('F', defaultBoard);
 console.log("topLeftCell: ", topLeftCell, "bottomRightCell: ", bottomRightCell);
-const {topLeftCell: topLeftCell2, bottomRightCell: bottomRightCell2} = getTopLeftCellAndBottomRightCellFromPos(pos, orientation, cellSize);
+const {topLeftCell: topLeftCell2, bottomRightCell: bottomRightCell2} = getTopLeftCellAndBottomRightCellFromPos(topLeftCellToPos(topLeftCell, cellSize, orientation), orientation, cellSize);
 console.log("topLeftCell2: ", topLeftCell2, "bottomRightCell2: ", bottomRightCell2);
 
 server.init('boardState', { board : defaultBoard, minMoves: defaultMinMoves, clusterSize: defaultClusterSize, carStates: initCarStates(defaultBoard), boardGeneration: 0});
@@ -388,7 +390,9 @@ export const init = async model => {
     }
 
     const buildICar = (id, board) => {
-        const {pos, scale, orientation, cellSize, topLeftCell, bottomRightCell} = getCarPosAndDimensions(id, board);
+        const {orientation, cellSize, topLeftCell, bottomRightCell} = getCarPosAndDimensions(id, board);
+        const pos = topLeftCellToPos(topLeftCell, cellSize, orientation);
+        const scale = getScaleFromOrientationAndCellSize(cellSize, orientation);
         const obj = model.add('cube').color(idToColor[id]);
 
         // console.log(id, orientation, cellSize, topLeftCell, bottomRightCell);
@@ -609,11 +613,13 @@ export const init = async model => {
                     }
                 }
                 // console.log("1. boardState.carStates: ", JSON.stringify(boardState.carStates));
+                let board = boardState.board;
                 for(let carId in boardState.carStates) {
                     if(boardState.carStates[carId].controlledBy == null) {
                         const cellSize = boardState.carStates[carId].cellSize;
                         const orientation = boardState.carStates[carId].orientation;
                         const {topLeftCell, bottomRightCell} = getTopLeftCellAndBottomRightCellFromPos(boardState.carStates[carId].controlledPos, orientation, cellSize);
+                        
                         const pos = topLeftCellToPos(topLeftCell, cellSize, orientation);
                         boardState.carStates[carId].controlledPos = pos;
                         // console.log("carId: ", carId, "topLeftCell: ", topLeftCell);
