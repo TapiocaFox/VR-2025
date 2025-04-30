@@ -170,7 +170,7 @@ const topLeftCellToPos = (topLeftCell, cellSize, orientation) => {
     return pos;
 }
 
-const getCarPosAndDimensions = (id, board) => {
+const getCarDimensions = (id, board) => {
     // Determine the top left u, v position of the car from the board state and the id.
     const bottomRightCell = [0, 0]; // Interger 
     const topLeftCell = [boardSize-1, boardSize-1];  // Interger 
@@ -213,7 +213,7 @@ const getCarPosAndDimensions = (id, board) => {
 
     // const scale = getScaleFromOrientationAndCellSize(cellSize, orientation);
     // const pos = topLeftCellToPos(topLeftCell, cellSize, orientation);
-
+    // console.log("topLeftCell: ", topLeftCell, "bottomRightCell: ", bottomRightCell);
     return {
         // pos: pos,
         // scale: scale,
@@ -252,14 +252,59 @@ const getTopLeftCellAndBottomRightCellFromPos = (pos, orientation, cellSize) => 
     return {topLeftCell: topLeftCell, bottomRightCell: bottomRightCell};
 }
 
-const isMoveValid = (board, carId, topLeftCellA, topLeftCellB, orientation, cellSize) => {
+const getBottomRightCellFromTopLeftCellAndOrientation = (topLeftCell, orientation, cellSize) => {
+    const bottomRightCell = [0, 0];
+    if(orientation === 'h') {
+        bottomRightCell[0] = topLeftCell[0] + cellSize - 1;
+        bottomRightCell[1] = topLeftCell[1];
+    }
+    else {
+        bottomRightCell[0] = topLeftCell[0];
+        bottomRightCell[1] = topLeftCell[1] + cellSize - 1;
+    }
+    return bottomRightCell;
+}
+
+const getIsMoveValid = (board, carId, topLeftCellA, topLeftCellB, orientation, cellSize) => {
     // Check if the move is valid.
-    // Check if there is a car in the topLeftCellA and topLeftCellB.
-    // If there is a car, check if it is the same car.
-    // If there is no car, check if the move is valid.
-    // If the move is valid, return true.
-    // Otherwise, return false.
+    // Check if there is a car in the topLeftCellA and topLeftCellB with cellSize and orientation.
+    const topLeftCell = [boardSize-1, boardSize-1]; // The most top and the most left cell.
+    const bottomRightCell = getBottomRightCellFromTopLeftCellAndOrientation(topLeftCell, orientation, cellSize);
+    
+    // Check if there is any car that is not the same car in the topLeftCell and bottomRightCell.
+    for(let i = topLeftCell[0]; i <= bottomRightCell[0]; i++) {
+        for(let j = topLeftCell[1]; j <= bottomRightCell[1]; j++) {
+            const cellId = board[i * boardSize + j];
+            if(cellId !== carId && cellId !== 'o') {
+                return false;
+            }
+        }
+    }
+
     return true;
+}
+
+const moveCarInBoard = (board, carId, topLeftCellA, topLeftCellB, orientation, cellSize) => {
+    // Move the car in the board. Assume the move is valid.
+    // Fill the old cells with 'o'. Based on the orientation and the cellSize.
+    // Get the old bottomRightCell.
+    const bottomRightCellA = getBottomRightCellFromTopLeftCellAndOrientation(topLeftCell, orientation, cellSize);
+    // Fill the old cells with 'o'.
+    for(let i = topLeftCellA[0]; i <= bottomRightCellA[0]; i++) {
+        for(let j = topLeftCellA[1]; j <= bottomRightCellA[1]; j++) {
+            board[i * boardSize + j] = 'o';
+        }
+    }
+
+    // Fill the new cells with the carId.
+    const bottomRightCellB = getBottomRightCellFromTopLeftCellAndOrientation(topLeftCell, orientation, cellSize);
+    for(let i = topLeftCellB[0]; i <= bottomRightCellB[0]; i++) {
+        for(let j = topLeftCellB[1]; j <= bottomRightCellB[1]; j++) {
+            board[i * boardSize + j] = carId;
+        }
+    }
+
+    return board;
 }
 
 const getRandomBoardState = () => {
@@ -279,7 +324,7 @@ const initCarStates = (board) => {
     const uniqueIds = [...new Set(board.split(''))];
     uniqueIds.forEach(id => {
         if(id !== 'o' && id !== 'x') {
-            const {orientation, cellSize, topLeftCell, bottomRightCell} = getCarPosAndDimensions(id, board);
+            const {orientation, cellSize, topLeftCell, bottomRightCell} = getCarDimensions(id, board);
             const pos = topLeftCellToPos(topLeftCell, cellSize, orientation);
             const scale = getScaleFromOrientationAndCellSize(cellSize, orientation);
             carStates[id] = {controlledBy: null, controlledPos: pos, isGrabbed: false, orientation: orientation, cellSize: cellSize, scale: scale};
@@ -317,7 +362,7 @@ const printBoardIn2D = (board) => {
 
 // Test the getTopLeftCellFromPos function.
 printBoardIn2D(defaultBoard);
-const {orientation, cellSize, topLeftCell, bottomRightCell} = getCarPosAndDimensions('F', defaultBoard);
+const {orientation, cellSize, topLeftCell, bottomRightCell} = getCarDimensions('F', defaultBoard);
 console.log("topLeftCell: ", topLeftCell, "bottomRightCell: ", bottomRightCell);
 const {topLeftCell: topLeftCell2, bottomRightCell: bottomRightCell2} = getTopLeftCellAndBottomRightCellFromPos(topLeftCellToPos(topLeftCell, cellSize, orientation), orientation, cellSize);
 console.log("topLeftCell2: ", topLeftCell2, "bottomRightCell2: ", bottomRightCell2);
@@ -390,7 +435,7 @@ export const init = async model => {
     }
 
     const buildICar = (id, board) => {
-        const {orientation, cellSize, topLeftCell, bottomRightCell} = getCarPosAndDimensions(id, board);
+        const {orientation, cellSize, topLeftCell, bottomRightCell} = getCarDimensions(id, board);
         const pos = topLeftCellToPos(topLeftCell, cellSize, orientation);
         const scale = getScaleFromOrientationAndCellSize(cellSize, orientation);
         const obj = model.add('cube').color(idToColor[id]);
@@ -618,10 +663,20 @@ export const init = async model => {
                     if(boardState.carStates[carId].controlledBy == null) {
                         const cellSize = boardState.carStates[carId].cellSize;
                         const orientation = boardState.carStates[carId].orientation;
-                        const {topLeftCell, bottomRightCell} = getTopLeftCellAndBottomRightCellFromPos(boardState.carStates[carId].controlledPos, orientation, cellSize);
+                        const {topLeftCell: boardTopLeftCell, bottomRightCell: boardBottomRightCell} = getCarDimensions(carId, board);
+                        const {nextTopLeftCell, nextBottomRightCell} = getTopLeftCellAndBottomRightCellFromPos(boardState.carStates[carId].controlledPos, orientation, cellSize);
+                        const isMoveValid = getIsMoveValid(board, carId, boardTopLeftCell, nextTopLeftCell, orientation, cellSize);
                         
-                        const pos = topLeftCellToPos(topLeftCell, cellSize, orientation);
-                        boardState.carStates[carId].controlledPos = pos;
+                        if(isMoveValid) {
+                            const pos = topLeftCellToPos(nextTopLeftCell, cellSize, orientation);
+                            const newBoard = moveCarInBoard(board, carId, boardTopLeftCell, nextTopLeftCell, orientation, cellSize);
+                            boardState.carStates[carId].controlledPos = pos;
+                            boardState.board = newBoard;
+                        }
+                        else {
+                            const pos = topLeftCellToPos(boardTopLeftCell, cellSize, orientation);
+                            boardState.carStates[carId].controlledPos = pos;
+                        }
                         // console.log("carId: ", carId, "topLeftCell: ", topLeftCell);
                     }
                 }
