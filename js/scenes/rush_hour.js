@@ -285,6 +285,7 @@ const initCarStates = (board) => {
     });
     return carStates;
 }
+
 const cleanUpCarStates = (carStates, clients) => {
     // Release control of the car if the client is not in the list of clients.
     for(let id in carStates) {
@@ -377,8 +378,7 @@ export const init = async model => {
                     // const old_2d_intersection = cg_ext.lineLineIntersection2D(pos_projected_on_x_axis, vertical_line_direction, o_xz, z_xz);
                     const new_2d_intersection = cg_ext.lineLineIntersection2D(pos_projected_on_x_axis, vertical_line_direction, o_n_xz, z_n_xz);
                     this.pos[2] = Math.max(Math.min(new_2d_intersection[1], boardMaxZ), boardMinZ);
-                    controlPanelText = `Vertical: new_z=${this.pos[2].toFixed(3)}\n` +
-                                    `intersection=[${new_2d_intersection.map(x => x.toFixed(3))}]`;
+                    controlPanelText = `Vertical: new_z=${this.pos[2].toFixed(3)}\n`;
                 }
                 server.send('carStateMessages', {carId: this.name, controlledBy: clientID, sendFrom: clientID, controlledPos: this.pos});
             } catch (e) {
@@ -422,27 +422,29 @@ export const init = async model => {
                 }
             },
             onHit: function(cs) {
-                controlPanelText = 'Hit carId: ' + this.name;
                 const boardState = iSubSys.boardState;
+                controlPanelText = 'Hit carId: ' + this.name + "\nclientID: "+clientID+"\ncontrolledBy: "+boardState.carStates[this.name].controlledBy;
                 if(boardState.carStates[this.name].controlledBy == null) {
                     server.send('carStateMessages', {carId: this.name, controlledBy: clientID, sendFrom: clientID, controlledPos: this.pos});
                 }
             },
             onGrab: function(cs) {
-                controlPanelText = 'Grab carId: ' + this.name;
+                const boardState = iSubSys.boardState;
+                controlPanelText = 'Grab carId: ' + this.name + "\nclientID: "+clientID+"\ncontrolledBy: "+boardState.carStates[this.name].controlledBy;
                 if(boardState.carStates[this.name].controlledBy == clientID) {
                     server.send('carStateMessages', {carId: this.name, controlledBy: clientID, isGrabbed: true, sendFrom: clientID, controlledPos: this.pos});
                 }
             },
             onUnGrab: function(cs) {
-                controlPanelText = 'UnGrab carId: ' + this.name;
+                const boardState = iSubSys.boardState;
+                controlPanelText = 'UnGrab carId: ' + this.name + "\nclientID: "+clientID+"\ncontrolledBy: "+boardState.carStates[this.name].controlledBy;
                 if(boardState.carStates[this.name].controlledBy == clientID) {
                     server.send('carStateMessages', {carId: this.name, controlledBy: clientID, isGrabbed: false, sendFrom: clientID, controlledPos: this.pos});
                 }
             },
             onUnHit: function(cs) {
-                controlPanelText = 'UnHit carId: ' + this.name;
                 const boardState = iSubSys.boardState;
+                controlPanelText = 'UnHit carId: ' + this.name + "\nclientID: "+clientID+"\ncontrolledBy: "+boardState.carStates[this.name].controlledBy;
                 if(boardState.carStates[this.name].controlledBy == clientID) {
                     server.send('carStateMessages', {carId: this.name, controlledBy: null, isGrabbed: false, sendFrom: clientID, controlledPos: this.pos});
                 }
