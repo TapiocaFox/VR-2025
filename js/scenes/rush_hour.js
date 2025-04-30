@@ -272,11 +272,11 @@ const getIsMoveValid = (board, carId, topLeftCellA, topLeftCellB, orientation, c
     const bottomRightCellA = getBottomRightCellFromTopLeftCellAndOrientation(topLeftCellA, orientation, cellSize);
     const bottomRightCellB = getBottomRightCellFromTopLeftCellAndOrientation(topLeftCellB, orientation, cellSize);
     const bottomRightCell = [Math.max(bottomRightCellA[0], bottomRightCellB[0]), Math.max(bottomRightCellA[1], bottomRightCellB[1])];
-
+    // console.log("topLeftCell: ", topLeftCell, "bottomRightCell: ", bottomRightCell);
     // Check if there is any car that is not the same car in the topLeftCell and bottomRightCell.
     for(let i = topLeftCell[0]; i <= bottomRightCell[0]; i++) {
         for(let j = topLeftCell[1]; j <= bottomRightCell[1]; j++) {
-            const cellId = board[i * boardSize + j];
+            const cellId = board[i + j * boardSize];
             if(cellId !== carId && cellId !== 'o') {
                 console.log("Move is not valid. There is a car in the way. carId: ", carId, ", cellId: ", cellId, ", x: ", i, ", y: ", j);
                 return false;
@@ -288,26 +288,28 @@ const getIsMoveValid = (board, carId, topLeftCellA, topLeftCellB, orientation, c
 }
 
 const moveCarInBoard = (board, carId, topLeftCellA, topLeftCellB, orientation, cellSize) => {
-    // Move the car in the board. Assume the move is valid.
     // Fill the old cells with 'o'. Based on the orientation and the cellSize.
     // Get the old bottomRightCell.
-    const bottomRightCellA = getBottomRightCellFromTopLeftCellAndOrientation(topLeftCell, orientation, cellSize);
+    // console.log("moveCarInBoard board: ", board);
+    const bottomRightCellA = getBottomRightCellFromTopLeftCellAndOrientation(topLeftCellA, orientation, cellSize);
     // Fill the old cells with 'o'.
+    let newBoard = board.split(''); // Convert string to array for modification
+
     for(let i = topLeftCellA[0]; i <= bottomRightCellA[0]; i++) {
         for(let j = topLeftCellA[1]; j <= bottomRightCellA[1]; j++) {
-            board[i * boardSize + j] = 'o';
+            newBoard[i + j * boardSize] = 'o';
         }
     }
 
+    const bottomRightCellB = getBottomRightCellFromTopLeftCellAndOrientation(topLeftCellB, orientation, cellSize);
     // Fill the new cells with the carId.
-    const bottomRightCellB = getBottomRightCellFromTopLeftCellAndOrientation(topLeftCell, orientation, cellSize);
     for(let i = topLeftCellB[0]; i <= bottomRightCellB[0]; i++) {
         for(let j = topLeftCellB[1]; j <= bottomRightCellB[1]; j++) {
-            board[i * boardSize + j] = carId;
+            newBoard[i + j * boardSize] = carId;
         }
     }
 
-    return board;
+    return newBoard.join(''); // Convert array back to string
 }
 
 const getRandomBoardState = () => {
