@@ -268,14 +268,17 @@ const getBottomRightCellFromTopLeftCellAndOrientation = (topLeftCell, orientatio
 const getIsMoveValid = (board, carId, topLeftCellA, topLeftCellB, orientation, cellSize) => {
     // Check if the move is valid.
     // Check if there is a car in the topLeftCellA and topLeftCellB with cellSize and orientation.
-    const topLeftCell = [boardSize-1, boardSize-1]; // The most top and the most left cell.
-    const bottomRightCell = getBottomRightCellFromTopLeftCellAndOrientation(topLeftCell, orientation, cellSize);
-    
+    const topLeftCell = [Math.min(topLeftCellA[0], topLeftCellB[0]), Math.min(topLeftCellA[1], topLeftCellB[1])]; // The most top and the most left cell.
+    const bottomRightCellA = getBottomRightCellFromTopLeftCellAndOrientation(topLeftCellA, orientation, cellSize);
+    const bottomRightCellB = getBottomRightCellFromTopLeftCellAndOrientation(topLeftCellB, orientation, cellSize);
+    const bottomRightCell = [Math.max(bottomRightCellA[0], bottomRightCellB[0]), Math.max(bottomRightCellA[1], bottomRightCellB[1])];
+
     // Check if there is any car that is not the same car in the topLeftCell and bottomRightCell.
     for(let i = topLeftCell[0]; i <= bottomRightCell[0]; i++) {
         for(let j = topLeftCell[1]; j <= bottomRightCell[1]; j++) {
             const cellId = board[i * boardSize + j];
             if(cellId !== carId && cellId !== 'o') {
+                console.log("Move is not valid. There is a car in the way. carId: ", carId, ", cellId: ", cellId, ", x: ", i, ", y: ", j);
                 return false;
             }
         }
@@ -664,7 +667,8 @@ export const init = async model => {
                         const cellSize = boardState.carStates[carId].cellSize;
                         const orientation = boardState.carStates[carId].orientation;
                         const {topLeftCell: boardTopLeftCell, bottomRightCell: boardBottomRightCell} = getCarDimensions(carId, board);
-                        const {nextTopLeftCell, nextBottomRightCell} = getTopLeftCellAndBottomRightCellFromPos(boardState.carStates[carId].controlledPos, orientation, cellSize);
+                        const {topLeftCell: nextTopLeftCell, bottomRightCell: nextBottomRightCell} = getTopLeftCellAndBottomRightCellFromPos(boardState.carStates[carId].controlledPos, orientation, cellSize);
+                        // console.log("boardTopLeftCell: ", boardTopLeftCell, "boardBottomRightCell: ", boardBottomRightCell);
                         const isMoveValid = getIsMoveValid(board, carId, boardTopLeftCell, nextTopLeftCell, orientation, cellSize);
                         
                         if(isMoveValid) {
