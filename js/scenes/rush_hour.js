@@ -373,7 +373,7 @@ console.log("topLeftCell: ", topLeftCell, "bottomRightCell: ", bottomRightCell);
 const {topLeftCell: topLeftCell2, bottomRightCell: bottomRightCell2} = getTopLeftCellAndBottomRightCellFromPos(topLeftCellToPos(topLeftCell, cellSize, orientation), orientation, cellSize);
 console.log("topLeftCell2: ", topLeftCell2, "bottomRightCell2: ", bottomRightCell2);
 
-server.init('boardState', { board : defaultBoard, minMoves: defaultMinMoves, clusterSize: defaultClusterSize, carStates: initCarStates(defaultBoard), boardGeneration: 0});
+server.init('boardState', { board : defaultBoard, initialBoard: `${defaultBoard}`, minMoves: defaultMinMoves, clusterSize: defaultClusterSize, carStates: initCarStates(defaultBoard), boardGeneration: 0});
 server.init('buttonMessages', {});
 server.init('carStateMessages', {});
 
@@ -598,7 +598,9 @@ export const init = async model => {
     const reset = () => {
         console.log('Reset');
         const boardState = server.synchronize('boardState');
-        boardState.boardGeneration++;
+        // boardState.boardGeneration++;
+        boardState.board = boardState.initialBoard;
+        boardState.carStates = initCarStates(boardState.board);
         server.broadcastGlobal('boardState', boardState);
         console.log('Reset Completed.');
     };
@@ -621,6 +623,7 @@ export const init = async model => {
         const boardState = server.synchronize('boardState');
         boardState.boardGeneration++;
         boardState.board = newBoardState.board;
+        boardState.initialBoard = `${newBoardState.board}`;
         boardState.minMoves = newBoardState.minMoves;
         boardState.clusterSize = newBoardState.clusterSize;
         boardState.carStates = initCarStates(newBoardState.board);
@@ -685,10 +688,10 @@ export const init = async model => {
         }
         const {topLeftCell: carATopLeftCell, cellSize: carACellSize} = getCarDimensions('A', boardState.board);
         if((boardSize-carACellSize) - carATopLeftCell[0] == 0) {
-            controlPanelTitle = controlPanelDefaultTitle + " - You win!";
+            controlPanelTitle = "Congrats! You've won!";
         }
         else if((boardSize-carACellSize) - carATopLeftCell[0] == 1) {
-            controlPanelTitle = controlPanelDefaultTitle + " - Almost there!";
+            controlPanelTitle = "Almost there!";
         }
         else {
             controlPanelTitle = controlPanelDefaultTitle;
