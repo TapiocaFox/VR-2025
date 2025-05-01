@@ -99,9 +99,9 @@ const boards = text.split('\n');
 // 58 BBoKMxDDDKMoIAALooIoJLEEooJFFNoGGoxN 9192
 const boardSize = 6;
 let generation = -1;
-const defaultBoard = "BBoKMxDDDKMoIAALooIoJLEEooJFFNoGGoxN";
-const defaultMinMoves = 58;
-const defaultClusterSize = 9192;
+const defaultBoard = "BBoooxDDDooooAAoooooooEEoooFFoooooxo";
+const defaultMinMoves = 0;
+const defaultClusterSize = 0;
 
 const boardWidth = 1.;
 const boardHeight = 0.05;
@@ -378,6 +378,8 @@ server.init('buttonMessages', {});
 server.init('carStateMessages', {});
 
 // const interactableObjs = [];
+const controlPanelDefaultTitle = 'Rush Hour';
+let controlPanelTitle = controlPanelDefaultTitle;
 let controlPanelText = 'Hello world';
 
 
@@ -681,6 +683,17 @@ export const init = async model => {
             generation = boardState.boardGeneration;
             firstInit = true;
         }
+        const {topLeftCell: carATopLeftCell, cellSize: carACellSize} = getCarDimensions('A', boardState.board);
+        if((boardSize-carACellSize) - carATopLeftCell[0] == 0) {
+            controlPanelTitle = controlPanelDefaultTitle + " - You win!";
+        }
+        else if((boardSize-carACellSize) - carATopLeftCell[0] == 1) {
+            controlPanelTitle = controlPanelDefaultTitle + " - Almost there!";
+        }
+        else {
+            controlPanelTitle = controlPanelDefaultTitle;
+        }
+
         iSubSys.update();
         // console.log("boardState.carStates: ", JSON.stringify(boardState.carStates));
 
@@ -713,7 +726,8 @@ export const init = async model => {
                         const {topLeftCell: nextTopLeftCell, bottomRightCell: nextBottomRightCell} = getTopLeftCellAndBottomRightCellFromPos(boardState.carStates[carId].controlledPos, orientation, cellSize);
                         // console.log("boardTopLeftCell: ", boardTopLeftCell, "boardBottomRightCell: ", boardBottomRightCell);
                         const isMoveValid = getIsMoveValid(board, carId, boardTopLeftCell, nextTopLeftCell, orientation, cellSize);
-                        
+                        const realTopLeftCell = isMoveValid ? nextTopLeftCell : boardTopLeftCell;
+
                         if(isMoveValid) {
                             const pos = topLeftCellToPos(nextTopLeftCell, cellSize, orientation);
                             const newBoard = moveCarInNewBoard(board, carId, boardTopLeftCell, nextTopLeftCell, orientation, cellSize);
@@ -767,8 +781,8 @@ export const init = async model => {
         this.fillRect(-1,-1,2,2);
 
         this.setColor('black');
-        this.textHeight(.1);
-        this.text('Control Panel', 0, .85, 'center');
+        this.textHeight(.09);
+        this.text(controlPanelTitle, 0, .85, 'center');
 
         this.setColor('black');
         this.textHeight(.08);
