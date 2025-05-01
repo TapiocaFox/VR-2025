@@ -105,12 +105,13 @@ const defaultClusterSize = 9192;
 
 const boardWidth = 1.;
 const boardHeight = 0.05;
-const boardPosition = [0, 0.00, 0];
+const boardPosition = [0, 0.00, -0.5];
+const controlPanelPosition = [boardPosition[0]-.4, boardPosition[1]+1.0, boardPosition[2]+0.0];
 
-const boardMinX = -boardWidth / 2;
-const boardMaxX = boardWidth / 2;
-const boardMinZ = -boardWidth / 2;
-const boardMaxZ = boardWidth / 2;
+const boardMinX = -boardWidth / 2 ;
+const boardMaxX = boardWidth / 2 ;
+const boardMinZ = -boardWidth / 2 ;
+const boardMaxZ = boardWidth / 2 ;
 
 const singleCellWidth = boardWidth / boardSize;
 const singleCellHeight = singleCellWidth;
@@ -118,15 +119,15 @@ const singleCellHeight = singleCellWidth;
 const carEmphasizeScale = 1.1;
 const carExtraEmphasizeScale = 1.2;
 
-const verticalGridDividers = [];
-for(let i = 0; i < boardSize; i++) {
-    verticalGridDividers.push(boardMinX + i * singleCellWidth);
-}
+// const verticalGridDividers = [];
+// for(let i = 0; i < boardSize; i++) {
+//     verticalGridDividers.push(boardMinX + i * singleCellWidth);
+// }
 
-const horizontalGridDividers = [];
-for(let i = 0; i < boardSize; i++) {
-    horizontalGridDividers.push(boardMinZ + i * singleCellWidth);
-}
+// const horizontalGridDividers = [];
+// for(let i = 0; i < boardSize; i++) {
+//     horizontalGridDividers.push(boardMinZ + i * singleCellWidth);
+// }
 
 
 const idToColor = {
@@ -287,8 +288,8 @@ const getIsMoveValid = (board, carId, topLeftCellA, topLeftCellB, orientation, c
     return true;
 }
 
-const moveCarInBoard = (board, carId, topLeftCellA, topLeftCellB, orientation, cellSize) => {
-    // Fill the old cells with 'o'. Based on the orientation and the cellSize.
+const moveCarInNewBoard = (board, carId, topLeftCellA, topLeftCellB, orientation, cellSize) => {
+    // Fill the old cells with '    o'. Based on the orientation and the cellSize.
     // Get the old bottomRightCell.
     // console.log("moveCarInBoard board: ", board);
     const bottomRightCellA = getBottomRightCellFromTopLeftCellAndOrientation(topLeftCellA, orientation, cellSize);
@@ -409,27 +410,51 @@ export const init = async model => {
             const beamMatrixNow = this.controllerInteractions.beamMatrix;
             let bm_n = beamMatrixNow;
             let o_n = bm_n.slice(12, 15);		// get origin of beam
-            let z_n = bm_n.slice( 8, 11);		// get z axis of beam
+            let beam_n = bm_n.slice( 8, 11);		// get z axis of beam
+            // Default using z axis. Use y axis if the two lines are almost parallel.
             const o_n_xz = [o_n[0], o_n[2]];
-            const z_n_xz = [z_n[0], z_n[2]];
+            const o_n_xy = [o_n[0], o_n[1]];
+            const o_n_yz = [o_n[1], o_n[2]];
+
+            const beam_n_xz = [beam_n[0], beam_n[2]];
+            const beam_n_xy = [beam_n[0], beam_n[1]];
+            const beam_n_yz = [beam_n[1], beam_n[2]];
+
+            const beam_n_xz_tangent = beam_n_xz[1]/beam_n_xz[0]
 
             // controlPanelText = 'Dragging... S1, z_n_xz: \n' + z_n_xz.map(x => x.toFixed(3)) +'\n o_n_xz: \n' + o_n_xz.map(x => x.toFixed(3));
             // const newPos = cg.add(cg.add(cg.add(o_n, x_s), y_s), z_s);
             // New position based on orientation. And the boundaries of the board.
             try {
                 if(this.orientation === 'h') {
-                    const pos_projected_on_z_axis = [0, this.pos[2]];
-                    const horizaontal_line_direction = [1, 0];
+                    const xz_pos_projected_on_z_axis = [0, this.pos[2]];
+                    const xz_horizaontal_line_direction = [1, 0];
+                    const xy_pos_projected_on_z_axis = [0, this.pos[1]];
+                    const xy_horizaontal_line_direction = [1, 0];
                     // const old_2d_intersection = cg_ext.lineLineIntersection2D(pos_projected_on_z_axis, horizaontal_line_direction, o_xz, z_xz);
-                    const new_2d_intersection = cg_ext.lineLineIntersection2D(pos_projected_on_z_axis, horizaontal_line_direction, o_n_xz, z_n_xz);
-                    this.pos[0] = Math.max(Math.min(new_2d_intersection[0], boardMaxX), boardMinX);
+                    const xz_2d_intersection = cg_ext.lineLineIntersection2D(xz_pos_projected_on_z_axis, xz_horizaontal_line_direction, o_n_xz, beam_n_xz);
+                    const xy_2d_intersection = cg_ext.lineLineIntersection2D(xy_pos_projected_on_z_axis, xy_horizaontal_line_direction, o_n_xy, beam_n_xy);
+                    if(Math.abs(beam_n_xz_tangent) >= 1) {
+                        this.pos[0] = Math.max(Math.min(xz_2d_intersection[0], boardPosition[0]+boardMaxX), boardPosition[0]+boardMinX);
+                    }
+                    else {
+                        this.pos[0] = Math.max(Math.min(xy_2d_intersection[0], boardPosition[0]+boardMaxX), boardPosition[0]+boardMinX);
+                    }
                     controlPanelText = `Horizontal: new_x=${this.pos[0].toFixed(3)}`;
                 } else {
-                    const pos_projected_on_x_axis = [this.pos[0], 0];
-                    const vertical_line_direction = [0, 1];
+                    const xz_pos_projected_on_x_axis = [this.pos[0], 0];
+                    const xz_vertical_line_direction = [0, 1];
+                    const yz_pos_projected_on_x_axis = [this.pos[1], 0];
+                    const yz_vertical_line_direction = [0, 1];
                     // const old_2d_intersection = cg_ext.lineLineIntersection2D(pos_projected_on_x_axis, vertical_line_direction, o_xz, z_xz);
-                    const new_2d_intersection = cg_ext.lineLineIntersection2D(pos_projected_on_x_axis, vertical_line_direction, o_n_xz, z_n_xz);
-                    this.pos[2] = Math.max(Math.min(new_2d_intersection[1], boardMaxZ), boardMinZ);
+                    const xz_2d_intersection = cg_ext.lineLineIntersection2D(xz_pos_projected_on_x_axis, xz_vertical_line_direction, o_n_xz, beam_n_xz);
+                    const yz_2d_intersection = cg_ext.lineLineIntersection2D(yz_pos_projected_on_x_axis, yz_vertical_line_direction, o_n_yz, beam_n_yz);
+                    if(Math.abs(beam_n_xz_tangent) <= 1) {
+                        this.pos[2] = Math.max(Math.min(xz_2d_intersection[1], boardPosition[2]+boardMaxZ), boardPosition[2]+boardMinZ);
+                    }
+                    else {
+                        this.pos[2] = Math.max(Math.min(yz_2d_intersection[1], boardPosition[2]+boardMaxZ), boardPosition[2]+boardMinZ);
+                    }
                     controlPanelText = `Vertical: new_z=${this.pos[2].toFixed(3)}\n`;
                 }
                 server.send('carStateMessages', {carId: this.name, controlledBy: clientID, sendFrom: clientID, controlledPos: this.pos});
@@ -609,28 +634,44 @@ export const init = async model => {
 
     // Add the board to the scene.
     const controlPanelObj = model.add('square').setTxtr(controlPanelG2.getCanvas());
-    controlPanelG2.addWidget(controlPanelObj, 'button',  .7, -.8, '#80ffff', 'reset', () => {
+    controlPanelG2.addWidget(controlPanelObj, 'button',  -0.6, -.85, '#80ffff', 'printInfo', () => {
+        // reset();
+        const board = iSubSys.boardState.board;
+        controlPanelText = "";
+        // console.log('Board:');
+        for(let i = 0; i < boardSize; i++) {
+            let row = '';
+            for(let j = 0; j < boardSize; j++) {
+                const cellId = board[i * boardSize + j];
+                row += cellId;
+            }
+            controlPanelText += row + '\n';
+        }
+        controlPanelText += "minMoves: " + iSubSys.boardState.minMoves + "\nclusterSize: " + iSubSys.boardState.clusterSize;
+    }, 1.2);
+
+    controlPanelG2.addWidget(controlPanelObj, 'button',  .7, -.85, '#80ffff', 'reset', () => {
         // reset();
         controlPanelText = "Reset Clicked.";
         server.send('buttonMessages', {reset: true});
-    });
+    }, 1.2);
 
-    controlPanelG2.addWidget(controlPanelObj, 'button',  .3, -.8, '#80ffff', 'undo', () => {
+    controlPanelG2.addWidget(controlPanelObj, 'button',  .375, -.85, '#80ffff', 'undo', () => {
         // undo();
         controlPanelText = "Undo Clicked."; 
         server.send('buttonMessages', {undo: true});
-    });
+    }, 1.2);
 
-    controlPanelG2.addWidget(controlPanelObj, 'button',  -.1, -.8, '#80ffff', 'random', () => {
+    controlPanelG2.addWidget(controlPanelObj, 'button',  0.00, -.85, '#80ffff', 'random', () => {
         // random();
         controlPanelText = "Random Clicked.";
         server.send('buttonMessages', {random: true});
-    });
+    }, 1.2);
 
     // reset();
     let firstInit = false;
     model.animate(() => {
-        controlPanelG2.update(); controlPanelObj.identity().move(-.4,1.0,-0.2).scale(.15);
+        controlPanelG2.update(); controlPanelObj.identity().move(controlPanelPosition).scale(.15);
         const boardState = server.synchronize('boardState');
         iSubSys.boardState = boardState;
         // console.log(boardState.boardGeneration, generation);
@@ -663,8 +704,8 @@ export const init = async model => {
                     }
                 }
                 // console.log("1. boardState.carStates: ", JSON.stringify(boardState.carStates));
-                let board = boardState.board;
                 for(let carId in boardState.carStates) {
+                    const board = boardState.board;
                     if(boardState.carStates[carId].controlledBy == null) {
                         const cellSize = boardState.carStates[carId].cellSize;
                         const orientation = boardState.carStates[carId].orientation;
@@ -675,7 +716,7 @@ export const init = async model => {
                         
                         if(isMoveValid) {
                             const pos = topLeftCellToPos(nextTopLeftCell, cellSize, orientation);
-                            const newBoard = moveCarInBoard(board, carId, boardTopLeftCell, nextTopLeftCell, orientation, cellSize);
+                            const newBoard = moveCarInNewBoard(board, carId, boardTopLeftCell, nextTopLeftCell, orientation, cellSize);
                             boardState.carStates[carId].controlledPos = pos;
                             boardState.board = newBoard;
                         }
@@ -727,11 +768,11 @@ export const init = async model => {
 
         this.setColor('black');
         this.textHeight(.1);
-        this.text('Control Panel', 0, .9, 'center');
+        this.text('Control Panel', 0, .85, 'center');
 
         this.setColor('black');
         this.textHeight(.08);
-        this.text(controlPanelText, 0, 0.5, 'center');
+        this.text(controlPanelText, 0, 0.05, 'center');
     }
  }
  
