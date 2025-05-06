@@ -63,7 +63,7 @@ export function HandsWidget(widgets) {
          for (let hand in P)
             for (let finger = 0 ; finger < 5 ; finger++)
               for (let i = 0 ; i < 5 ; i++)
-                 P[hand].push(clientState.teleport(hand,5*finger+i).slice(12,15));
+                 P[hand].push(cg.mMultiply(worldCoords,clientState.teleport(hand,5*finger+i)).slice(12,15));
 
          hands.setMatrix(clay.inverseRootMatrix);
 

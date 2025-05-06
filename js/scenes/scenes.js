@@ -1,7 +1,7 @@
 export default () => {
    return {
       enableSceneReloading: true,
-      scenes: [ 
+      scenes: [
             { name: "rush_hour"    , path: "./rush_hour.js"    , public: true },
             { name: "sentence_cloud"    , path: "./sentence_cloud.js"    , public: true },
             { name: "basketapple"  , path: "./basketapple.js"  , public: true },
@@ -58,6 +58,8 @@ export default () => {
             { name: "speech1"        , path: "./speech1.js"       , public: true  },
             { name: "speech2"        , path: "./speech2.js"       , public: true  },
             { name: "speech3"        , path: "./speech3.js"       , public: true  },
+
+            { name: "drawHouse"      , path: "./drawHouse.js"     , public: true  },
 
             { name: "bouncing1"      , path: "./bouncing1.js"     , public: true  },
             { name: "bouncing2"      , path: "./bouncing2.js"     , public: true  },
