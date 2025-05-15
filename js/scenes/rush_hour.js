@@ -373,7 +373,7 @@ console.log("topLeftCell: ", topLeftCell, "bottomRightCell: ", bottomRightCell);
 const {topLeftCell: topLeftCell2, bottomRightCell: bottomRightCell2} = getTopLeftCellAndBottomRightCellFromPos(topLeftCellToPos(topLeftCell, cellSize, orientation), orientation, cellSize);
 console.log("topLeftCell2: ", topLeftCell2, "bottomRightCell2: ", bottomRightCell2);
 
-server.init('boardState', { board : defaultBoard, initialBoard: `${defaultBoard}`, minMoves: defaultMinMoves, clusterSize: defaultClusterSize, carStates: initCarStates(defaultBoard), boardGeneration: 0});
+server.init('boardState', { board : defaultBoard, initialBoard: `${defaultBoard}`, boardHistory: [`${defaultBoard}`], minMoves: defaultMinMoves, clusterSize: defaultClusterSize, carStates: initCarStates(defaultBoard), boardGeneration: 0});
 server.init('buttonMessages', {});
 server.init('carStateMessages', {});
 
@@ -541,6 +541,7 @@ export const init = async model => {
 
     const iCars = [];
     const iWalls = [];
+    let primaryCar = null;
 
     // Initialize the new generation.
     const initNewGeneration = (boardState) => {
@@ -548,7 +549,7 @@ export const init = async model => {
         printBoardIn2D(board);
         iCars.forEach(iCar => iCar.destroy());
         iWalls.forEach(iWall => iWall.destroy());
-
+        primaryCar = null;
         // Build the ICars. Avoid repeating the same cell with same id.
         // Add the ICars using `addInteractableObj`.
         // Filter out all the unique ids from the board.
@@ -556,6 +557,9 @@ export const init = async model => {
         uniqueIds.forEach(id => {
             if(id !== 'o' && id !== 'x') {
                 const iCar = buildICar(id, board);
+                if(id === 'A') {
+                    primaryCar = iCar;
+                }
                 iSubSys.addInteractableObj(iCar);
                 iCars.push(iCar);
             }
@@ -601,6 +605,7 @@ export const init = async model => {
         // boardState.boardGeneration++;
         boardState.board = boardState.initialBoard;
         boardState.carStates = initCarStates(boardState.board);
+        boardState.boardHistory = [boardState.initialBoard];
         server.broadcastGlobal('boardState', boardState);
         console.log('Reset Completed.');
     };
@@ -609,8 +614,14 @@ export const init = async model => {
     const undo = () => {
         console.log('Undo');
         const boardState = server.synchronize('boardState');
-        boardState.boardGeneration++;
-        server.broadcastGlobal('boardState', boardState);
+        // boardState.boardGeneration++;
+        console.log("boardState: ", boardState);
+        const previewBoard = boardState.boardHistory.pop();
+        if(previewBoard !== undefined) {
+            boardState.board = previewBoard;
+            boardState.carStates = initCarStates(boardState.board);
+            server.broadcastGlobal('boardState', boardState);
+        }
         console.log('Undo Completed.');
     };
 
@@ -627,6 +638,7 @@ export const init = async model => {
         boardState.minMoves = newBoardState.minMoves;
         boardState.clusterSize = newBoardState.clusterSize;
         boardState.carStates = initCarStates(newBoardState.board);
+        boardState.boardHistory = [newBoardState.board];
         server.broadcastGlobal('boardState', boardState);
         console.log('Random Completed.');
     };
@@ -735,7 +747,11 @@ export const init = async model => {
                             const pos = topLeftCellToPos(nextTopLeftCell, cellSize, orientation);
                             const newBoard = moveCarInNewBoard(board, carId, boardTopLeftCell, nextTopLeftCell, orientation, cellSize);
                             boardState.carStates[carId].controlledPos = pos;
-                            boardState.board = newBoard;
+                            
+                            if(boardState.board !== newBoard) {
+                                boardState.boardHistory.push(boardState.board);
+                                boardState.board = newBoard;
+                            }
                         }
                         else {
                             const pos = topLeftCellToPos(boardTopLeftCell, cellSize, orientation);
